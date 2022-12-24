@@ -8,7 +8,7 @@
 > 🧩 A Simple NFT Marketplace Database Schemas
 
 <p align="center">
-    <img src="https://github.com/wildonion/smarties/blob/main/models/schemas.PNG">
+    <img src="https://github.com/wildonion/smarties/blob/main/schemas.PNG">
 </p>
 
 
