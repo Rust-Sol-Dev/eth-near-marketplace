@@ -1,2 +1,2 @@
 
-🧧 NFT and Market Contracts on NEAR and Ethereum Blockchains
+🧧 Marketplace Contracts on NEAR and Ethereum Blockchains
