@@ -1,0 +1,34 @@
+[package]
+name = "proposal"
+version = "0.1.0"
+authors = ["WILDONION <marefimoghaddam@unixerr.com>"]
+edition = "2021"
+
+
+
+
+[dependencies]
+near-sdk = "4"
+
+
+
+
+
+[lib]
+# libraries don't have entry points, you can't run them,they're used for functionality sharing like binding a .wasm into js codes
+# we need lib.rs and crate type of cdylib for none binary like .wasm, .so, .dylib and .dll files
+crate-type = ["cdylib", "rlib"]
+
+
+
+
+
+[profile.release]
+codegen-units = 1
+# Tell `rustc` to optimize for small code size.
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+# Opt into extra safety checks on arithmetic operations https://stackoverflow.com/a/64136471/249801
+overflow-checks = true # panic on integer overflow

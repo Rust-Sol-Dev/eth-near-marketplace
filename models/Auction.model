@@ -1,0 +1,13 @@
+
+
+
+
+
+🗃️ nft_id                : String
+🗃️ is_ended              : Bool
+🗃️ start_time            : DateTime String (Timestamp)
+🗃️ duration              : DateTime String (Timestamp)
+🗃️ starting_price        : String
+🗃️ reserve_price         : String
+🗃️ include_reserve_price : Bool
+🗃️ bids                  : [{}]

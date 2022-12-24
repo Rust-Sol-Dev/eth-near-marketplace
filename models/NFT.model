@@ -1,0 +1,30 @@
+
+
+
+
+
+
+
+
+🗃️ tile                 : String
+🗃️ description          : String
+🗃️ price                : String
+🗃️ copies               : Int
+🗃️ issued_at            : DateTime String (Timestamp)
+🗃️ expires_at           : DateTime String (Timestamp)
+🗃️ updated_at           : DateTime String (Timestamp)
+🗃️ extra                : [{PropertyModel}]
+🗃️ reference            : {}
+🗃️ views                : Int
+🗃️ likes                : [Int]
+🗃️ current_owner        : String
+🗃️ media                : String
+🗃️ owners               : [OwnersModel]
+🗃️ perpetual_royalties  : [PerpetualRoyaltyModel]
+🗃️ offers               : [OfferModel]
+🗃️ listings             : [ListingsModel]
+🗃️ asset_activity       : [AssetActivityModel]
+🗃️ price_history        : [PriceHistoryModel]
+🗃️ approved_account_ids : {"wallet_address": Int, ...}
+🗃️ auction              : [AuctionModel]
+🗃️ tx_hash              : String

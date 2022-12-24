@@ -1,0 +1,8 @@
+
+
+
+
+
+🗃️ owner_wallet_address: String
+🗃️ sold_at             : DateTime String (Timestamp)
+🗃️ price               : String

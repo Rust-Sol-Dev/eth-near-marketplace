@@ -1,0 +1,22 @@
+
+
+
+
+
+
+🗃️ status              : Status
+🗃️ nft_id              : ObjectId
+🗃️ nft_title           : String
+🗃️ nft_media           : String
+🗃️ from_wallet_address : String 
+🗃️ to_wallet_address   : String
+🗃️ price               : String
+
+
+
+
+enum Status{
+    accepted,
+    waiting,
+    canceled
+}

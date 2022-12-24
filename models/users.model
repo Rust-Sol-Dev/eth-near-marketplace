@@ -1,0 +1,17 @@
+
+
+
+
+
+
+🗃️ username      : String
+🗃️ wallet_address: String
+🗃️ reg_date      : DateTime String (Timestamp)
+🗃️ avatar        : File
+🗃️ avatar_path   : String
+🗃️ banner        : File
+🗃️ banner_path   : String
+🗃️ last_connect  : DateTime String (Timestamp)
+🗃️ description   : String
+🗃️ offers        : [Offer]
+🗃️ extra         : {}

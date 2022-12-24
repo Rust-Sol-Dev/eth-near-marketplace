@@ -1,0 +1,11 @@
+
+
+
+
+
+🗃️ event                  : String
+🗃️ expiration             : DateTime String (Timestamp)
+🗃️ price                  : String
+🗃️ receiver_wallet_address: String
+🗃️ from_wallet_address    : String
+🗃️ date                   : DateTime String (Timestamp)

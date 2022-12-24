@@ -1,0 +1,284 @@
+
+
+
+
+
+
+
+                                                ⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉
+                                                ⚉⚉ NEAR PROTOCOL DESIGN PATTERN TIPS ⚉⚉
+                                                ⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉⚉     
+                    
+
+
+                                 -------------------------------------------------------------------------
+                                /                                                                          \
+                                ----------------------------------------------------------------------------
+                                Actor Definition : Actor is an object created from a struct that can sends 
+                                                future objects of messages or events or receipts to other 
+                                                actors asyncly their address through some message passing 
+                                                protocol like mpsc.
+                                Actors in near   : are shards which contains blocks in which there are lots of 
+                                                transactions made from contracts' methods, so every shards 
+                                                can communicate with each other thus every block can thus 
+                                                every contract account also can using promises.
+                                Near is          : an asynchronous, actor based sharded runtime, meaning that 
+                                                two contracts can be executed at the same 
+                                                time in different shards.
+                                -----------------------------------------------------------------------------
+                                \   near uses promise for async execution of receipts pass between actors   /
+                                ---------------------------------------------------------------------------
+                
+                                
+
+                                pub struct Account{
+                                    pub id: CryptoHash // sha256 bits or 32 bytes or 64 char of hex of the hash of the account_id string which is the address of this actor  
+
+                                }
+
+                                pub struct Shard;
+
+                                impl Actor for Shard{}
+
+
+                                impl Actor for Account{
+                                    
+                                    // impl some methods to transfer future objects of receipts or messages or events asyncly to other contract actor accounts or receptor
+                                    // ...
+
+                                    fn start(){ // start a new thread pool for this actor
+
+                                    }
+
+                                    fn send(receptor) -> Future<Output=Receipts>{ // ge the result of the send() method using a .then() syntax
+
+                                    }
+                                }
+
+
+
+                                -> coiniXerr project in scheduler.rs line 44
+
+
+           Actor (address: alice.near)                                                                                                     Actor (address: bob.near)
+              --------------------                                                                                                           --------------------                                                                                                  
+            |                     |                                                                                                        |                     |
+            |        Shard-0      |                                                                                                        |        Shard-1      |
+            |   ---------------   |                                                                                                        |   ---------------   | 
+            |  |               |  |  [Promise Message Passing (futures or receipts) Between Contract Actors Based on Pre-defined Actions]  |  |               |  |
+            |  | Alice Account |  |         <---------- promise or future object contains data like funding balance ---------->            |  |  Bob Account  |  |
+            |  |   ----------  |  |                                                                                                        |  |   ----------  |  |
+            |  |  |contract A| |  |                       ---------------- [RPC CHANNEL] ----------------                                  |  |  |contract B| |  |
+            |  | / ----------  |  |                                                                                                        |  | / ----------  |  |
+            |  / ---------------  |                                                                                                        |  / ---------------  |
+             / -------------------                                                                                                         / -------------------
+           /                                                                                                                             /
+         /                                                                                                                             /
+    contract-A.wasm                                                                                                               contract-B.wasm
+
+
+
+☢️ every contract actor account communicates with other account using their actor address 
+    through the RPC channel in json format, by using RPC protocol we can call each contract method
+    directly from other contracts and give a promise or future object as our reponse.  
+
+
+
+☢️ every contract and shard is an actor which can communicate with each other using promise or 
+   future objects which contains transaction info or receipts through the mpsc channel.
+   and each transaction which is built by the runtime from method calls or pre defind actions 
+   is a receipt which has a unique id. and batch actions (like transferring NEARs or calling other contract method) 
+   can be executed in the same receipt created by the runtime.
+
+
+
+☢️ Alice's contract actor account is in shard-0 and Bob's contract actor account is in shard-1 which can interact with each other through mpsc channel
+    by scheduling promise or future objects or async messages to execute them inside each other.  
+
+
+
+☢️ each shard is an actor and has some contract accounts which are actors too and same shard accounts can only communicate with each other through their address.
+
+
+
+☢️ a shard contains its own of chain of chunks called blockchain which are created by its own set of validators plus some accounts which can communicate with each other in a same shard 
+    by scheduling a promise or a future object contains the action which is an async message in first account to execute later on the second account 
+    and get the result inside the first account through the mpsc channel.
+
+
+
+☢️ actor based cross shard transaction design pattern is about communication of shards (every shard is an independent object which supports multi threading) 
+    or actors through the mpsc channel by scheduling a promise or future object containing a pre defined async message to be executed later on other shards.
+
+
+
+☢️ every account blongs to a unique shard actor which can interact with other accounts in a same shard through the shard address 
+   which is the account_id itself; each promise action receipt will be created by incoming transaction by the runtime, means every 
+   transaction is an async message or promise or a future object which can be scheduled to run later inside other contract actor account 
+   or shard like the refunding transaction which is a promise or a future object created by the runtime from that transaction which 
+   contains the destination account_id as its communication address where it must be scheduled for refunding that account once it gets solved.  
+
+    
+
+☢️ near runtime will create promise action receipts from the transactions either by converting a contract method or one the following variant to send async message between shards 
+    https://near-docs.io/concepts/basics/transactions/overview
+    pub enum Action { 
+        CreateAccount(CreateAccountAction),
+        DeployContract(DeployContractAction),
+        FunctionCall(FunctionCallAction),
+        Transfer(TransferAction),
+        Stake(StakeAction),
+        AddKey(AddKeyAction),
+        DeleteKey(DeleteKeyAction),
+        DeleteAccount(DeleteAccountAction),
+    }
+
+
+
+☢️ receipts (or event inside the actor world!) are async messages which are in form of promise or future objects and will be created by runtime 
+   from every transaction (action receipt) which contains either one of the above enum variant actions or a contract method to apply to a receiver (another contract actor account)
+   and can be scheduled to be run later by passing them between actors or shards (contains blocks which contains transaction made from contracts' methods) asyncly (using the defined promise) through mpsc channel
+   using the address of the second contract actor account.
+   
+   
+
+☢️ each contract belongs to a specific account and each account belongs to a specific shard which means we can pass message between contract actor account or shards 
+   using actor design pattern through the address of each actor which is the account_id itself and is more like every contract is an actor and every method of a contract 
+   is a transaction of different type like payable ones and none payable ones which contains the sender and receiver account id and runtime 
+   will create action receipt or message from these transactions (they can also mutate the state inside the contract). 
+
+
+
+☢️ promises are future objects which contains some async message or receipt (data receipt) and can be scheduled to run and act on a given account_id based 
+   on some action receipt (which will be created by runtime from a transaction or contract method like transferring fund to other contract or account) to run them inside 
+   other contract actor accounts (threads) by passing them asyncly through the mpsc channel using the address object of each contract actor account to solve them (join or await on them) 
+   inside other threads (contract actor accounts) and get the result (awaited or joined response from the future or promise) of the promise after they get solved by passing the 
+   callback method from the first contract actor account into the .then() of the promise object and the callback contract has the data receipt of the first contract actor account.
+
+
+   
+☢️ promise objects will be scheduled to sovle later inside other actors by passing them through mpsc channel asyncly 
+   to other actors like creating a promise of refund action receipt to refund an account or other contract actor accounts later.
+    
+
+
+☢️ we can await on multiple promises or future objects simultaneously in near contracts using promise; is more like joining on each of future object simultaneously.
+
+
+
+☢️ since we can't have future objects in our contracts due to the fact that smart contract can't communicate with their outside 
+   world and in order to solve the future we need tokio which is a socket based framework.
+
+
+
+☢️ data receipt contains some data for the action receipt and data inside the action receipt is an Option 
+   and if it was Some means we have awaited on that action and have some data.
+
+
+
+☢️ action receipt contains vector of input data with their id for executing them based on the specified action and output data 
+   vector which indicates data id and the receiver id or the other contract actor account.
+   
+
+   
+☢️ for every incoming action receipt created by runtime from each transaction; runtime checks whether we have all the data receipt (data id inside the action receipt) 
+   required for the execution if all the required data receipts are already in the storage, runtime can apply this action actor immediately otherwise we save this 
+   receipt as a postponed action receipt and also we save pending data receipts count and a link from pending data receipts to the address of postponed action receipt; 
+   now runtime will wait for all the missing data receipts to apply the postponed action receipt.  
+
+
+
+☢️ receipt id is the id of the message passed between actors using a promise, like deploying a contract which is a trasaction build from 
+   an action receipt by runtime which can be called from another contract or actor insde a block which is inside a shard using its receipt id.
+
+
+
+☢️ contracts can communicate with each other on a same chain through a none socket layer called actor model 
+    means that every contract must be an actor to communicate through their actor address 
+    to pass promise action receipts or async messages.
+
+
+☢️ contract actor accounts can't communicate with their outside world or other chain contracts they can only 
+    communicate with each other on a same chain through a none socket layer like actor address.
+
+
+
+
+☢️ the following function is a simulation of the near runtime which will create promise (future object) ActionReceipt from each transaction 
+    that can be either a pre defined action like funding or deleting account or a contract method.
+
+
+
+☢️ all methods of a contract must be called (from other contract actor accounts) and changed the state of the contract using the following pattern which is an actor design pattern.
+
+
+
+☢️ evety contract is an actor and every transaction is a receipt which can be either a pre defined action or a contract method call.
+
+
+
+☢️ some pre defined methods are exist inside every account or contract actor account and we can call them to create some promise (future object) ActionReceipts like transfer and delete account actions.
+
+
+
+☢️ all receipts or messages (Action or Data) must be in form of promise object in order to pass them between account or contract actor accounts asyncly.
+
+
+
+☢️ sharded blockchain means that every shard is an actor which contains multiple blocks and chained transactions (contract method calls or pre defined actions) 
+    in each will communicates with each other using addr object like passing data by calling a contract method inside block A to another contract method inside 
+    the block B asyncly, which would be a message passing process between two shards containing these blocks. 
+
+
+
+☢️ receipts in near are async messages or promise or future objects built from every transaction (which can be either a pre defind action or a contract method) by the runtime 
+    moving between receiver shards asyncly to apply and execute them inside those receiver shards using the built promise (future object) ActionReceipt 
+    object from that message.
+
+
+
+☢️ actors are smart objects with defined methods and a specific address; in NEAR we can call a method inside the second contract actor account from the first contract actor account 
+    by scheduling a promise or a future object which contains an promise (future object) ActionReceipt which is an async message called transaction tells us what 
+    method we want to execute later inside the second contract actor account also there is method obviously inside the first contract actor account as a callback in which we have 
+    access to the DataReceipt coming from second contract actor account after solving the promise using .then() method.
+
+
+
+☢️ all messages like calling a method of a second actor from first actor will passed asyncly through a mpsc channel using actor address means we can solve them by .await or .then() method.
+
+
+
+☢️ instead of running the entire code on the validator system we can use nightshade (treats the system as a single blockchain) and sharding design pattern to avoid forking and DDOSing; 
+    in such a way that we will run multiple different blockchains (set of created blocks) and call each such blockchain a shard (collection of all shards form the whole blockchain system) 
+    and each shard will have its own set of validators or nodes each of them has some confirmed transactions called chunks to make a block, means each shard contains blocks 
+    each of them created by its set of randomly choosen (based on a specific randomness algorithm) validators and forms the blockchain of that shard in such a way each validator 
+    submits a segment of each block or chunk which is a confirmed transactions set of a specific validator inside that shard.
+
+
+
+☢️ each shard is an actor which can communicate with each other by sending async message which is called promise or future object through mpsc channel.
+
+
+
+☢️ based on sharding design pattern random validators will be choosen to assign to the shards at each epoch to create the block with their own valid transactions.
+
+
+
+☢️ participants need not download the full state, instead maintaining only the state that is part of the shard they are validating transactions for their name is
+   light nodes, those that only download block headers, and use Merkle proofs for parts of the state and transactions they are interested in.
+
+
+
+☢️ similarly to how an HTTP request runs on a web server, each function call to a smart contract gets executed in an entirely new stateless environment on the blockchain. Specifically, 
+    each node in the relevant shard (which typically contains around 100 nodes) spins up a virtual machine to execute that code locally. That virtual machine then executes the WebAssembly (Wasm) 
+    that your AssemblyScript code has been compiled into. Once it is done, the node quits the VM.
+
+
+
+☢️ all near contracts are smart objects with some pre defined methods which can call each other's methods 
+    asyncly through mpsc channel by scheduling a future object contains the method name.
+
+
+
+☢️ the instructions in near code must be supported by the near VM means adding extra libs won't be compiled by the near VM and we'll face us to `wasm unreachable opcode`
+    reseaon for unreachable wasm opcode => https://discordapp.com/channels/490367152054992913/855524499755499520/999047499958456320    

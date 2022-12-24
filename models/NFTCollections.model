@@ -1,0 +1,24 @@
+
+
+
+
+
+
+
+🗃️ title           : String
+🗃️ nft_ids         : [ObjectId]
+🗃️ category        : String   
+🗃️ creator         : String
+🗃️ floor_price     : String
+🗃️ minted_at       : DateTime String (Timestamp)
+🗃️ extra           : {}
+🗃️ updated_at      : DateTime String (Timestamp)
+🗃️ description     : String 
+🗃️ logo            : File
+🗃️ logo_path       : String
+🗃️ banner          : File
+🗃️ banner_path     : String
+🗃️ created_at      : DateTime String (Timestamp)
+🗃️ nft_owners_count: Int
+🗃️ views           : Int
+🗃️ likes           : [Int]
