@@ -1,5 +1,9 @@
 
 
+<p align="center">
+    <img src="https://github.com/wildonion/smarties/blob/main/near_eth.png">
+</p>
+
 
 > 🧩 A Simple NFT Marketplace Database Schemas
 
