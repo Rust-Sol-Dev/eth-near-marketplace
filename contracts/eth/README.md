@@ -14,6 +14,8 @@
 
 * NFT events (item activity and listings)
 
+* NFT reveal
+
 * NFT contract
 
 * Market Contract
