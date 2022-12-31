@@ -16,6 +16,8 @@
 
 * NFT reveal
 
+* Perpetual Royalty
+
 * NFT contract
 
 * Market Contract
