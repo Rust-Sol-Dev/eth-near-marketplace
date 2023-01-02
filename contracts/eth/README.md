@@ -10,6 +10,6 @@
 
 # WIP
 
-* NFT reveal
+* NFT reveal and its event
 
 * ERC1155
