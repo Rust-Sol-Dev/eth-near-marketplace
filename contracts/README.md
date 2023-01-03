@@ -3,6 +3,8 @@
 
 ## ✨ Features
 
+* Deposit and Add Fund
+
 * Offer
 
 * Auction Bid

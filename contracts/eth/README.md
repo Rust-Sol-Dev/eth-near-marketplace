@@ -13,3 +13,5 @@
 * NFT reveal
 
 * ERC1155
+
+* Deposit Token
