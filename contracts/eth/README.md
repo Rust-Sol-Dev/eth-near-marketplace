@@ -41,6 +41,8 @@ npx hardhat test test/dortzio.ts --network goerli
 
 * Deposit and Withdraw Token 
 
+* Test methods
+
 ## References
 
 * https://github.com/kofkuiper/kuiper-nft-marketplace
