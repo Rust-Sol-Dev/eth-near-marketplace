@@ -42,7 +42,7 @@ describe("Dortzio Marketplace", () => {
         expect(marketplace.address).not.eq(null, "Deploy marketplace is failed.");
 
         const Token = new Token__factory(owner);
-        payableToken = await Token.deploy('Dortzio Token', 'KPT');
+        payableToken = await Token.deploy('Dortzio Token', 'DTZ');
         await payableToken.deployed();
         expect(payableToken.address).not.eq(null, "Deploy test payable token is failed.");
 
