@@ -5,25 +5,21 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-
-
-interface DortzioNFTFactory{
+interface IDortzioNFTFactory {
     function createNFTCollection(
         string memory _name,
         string memory _symbol,
         uint256 _royaltyFee
     ) external;
 
-    function isDortzioNFT(address _nft) external view returns (bool);
+    function isdortzioNFT(address _nft) external view returns (bool);
 }
 
+interface IDortzioNFT {
+    function getRoyaltyFee() external view returns (uint256);
 
-interface DortzioNFT{
-    function getRoyaltyFee() external view returns(uint256);
     function getRoyaltyRecipient() external view returns (address);
 }
-
-
 
 /*  
 
@@ -31,8 +27,9 @@ interface DortzioNFT{
     the market contract
     -------------------
 
-    • ERC1155 to buy batch transfer : MUST BE ADDED                
-    • Deposit Token                 : MUST BE ADDED
+    • ERC1155 to buy NFT batch                
+    • Deposit and Withdraw Token 
+    • NFT Metadata             
     • NFT Events   
     • List NFT          
     • Buy NFT
@@ -43,22 +40,22 @@ interface DortzioNFT{
     • Royalty 
 
 */
-contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
+contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
+    IDortzioNFTFactory private immutable dortzioNFTFactory;
 
-    DortzioNFTFactory private immutable dortzioNFTFactory;
-
-    uint256 private paltformFee;
+    uint256 private platformFee;
     address private feeRecipient;
 
-    struct ListNFT{
+    struct ListNFT {
         address nft;
         uint256 tokenId;
+        address seller;
         address payToken;
         uint256 price;
         bool sold;
     }
 
-    struct OfferNFT{
+    struct OfferNFT {
         address nft;
         uint256 tokenId;
         address offerer;
@@ -67,7 +64,7 @@ contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
         bool accepted;
     }
 
-    struct AuctionNFT{
+    struct AuctionNFT {
         address nft;
         uint256 tokenId;
         address creator;
@@ -82,24 +79,24 @@ contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
         bool success;
     }
 
-    // the mappings
-
     mapping(address => bool) private payableToken;
     address[] private tokens;
 
+    // nft => tokenId => list struct
     mapping(address => mapping(uint256 => ListNFT)) private listNfts;
 
+    // nft => tokenId => offerer address => offer struct
     mapping(address => mapping(uint256 => mapping(address => OfferNFT)))
         private offerNfts;
-    
+
+    // nft => tokenId => acuton struct
     mapping(address => mapping(uint256 => AuctionNFT)) private auctionNfts;
 
+    // auciton index => bidding counts => bidder address => bid price
     mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
-        private bidPrice;
+        private bidPrices;
 
-
-    // the events
-    
+    // events
     event ListedNFT(
         address indexed nft,
         uint256 indexed tokenId,
@@ -164,24 +161,23 @@ contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
         address caller
     );
 
-
     constructor(
         uint256 _platformFee,
         address _feeRecipient,
-        DortzioNFTFactory _dortzioNFTFactory
+        IDortzioNFTFactory _dortzioNFTFactory
     ) {
         require(_platformFee <= 10000, "can't more than 10 percent");
-        paltformFee = _platformFee;
+        platformFee = _platformFee;
         feeRecipient = _feeRecipient;
         dortzioNFTFactory = _dortzioNFTFactory;
     }
 
-    modifier isDortzioNFT(address _nft){
-        require(dortzioNFTFactory.isDortzioNFT(_nft), "not dortzio NFT");
+    modifier isdortzioNFT(address _nft) {
+        require(dortzioNFTFactory.isdortzioNFT(_nft), "not dortzio NFT");
         _;
     }
 
-    modifier isListedNFT(address _nft, uint256 _tokenId){
+    modifier isListedNFT(address _nft, uint256 _tokenId) {
         ListNFT memory listedNFT = listNfts[_nft][_tokenId];
         require(
             listedNFT.seller != address(0) && !listedNFT.sold,
@@ -190,7 +186,7 @@ contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
         _;
     }
 
-    modifier isNotListedNFT(address _nft, uint256 _tokenId){
+    modifier isNotListedNFT(address _nft, uint256 _tokenId) {
         ListNFT memory listedNFT = listNfts[_nft][_tokenId];
         require(
             listedNFT.seller == address(0) || listedNFT.sold,
@@ -238,8 +234,30 @@ contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
         _;
     }
 
+    // @notice List NFT on Marketplace
+    function listNft(
+        address _nft,
+        uint256 _tokenId,
+        address _payToken,
+        uint256 _price
+    ) external isdortzioNFT(_nft) isPayableToken(_payToken) {
+        IERC721 nft = IERC721(_nft);
+        require(nft.ownerOf(_tokenId) == msg.sender, "not nft owner");
+        nft.transferFrom(msg.sender, address(this), _tokenId);
 
-// @notice Cancel listed NFT
+        listNfts[_nft][_tokenId] = ListNFT({
+            nft: _nft,
+            tokenId: _tokenId,
+            seller: msg.sender,
+            payToken: _payToken,
+            price: _price,
+            sold: false
+        });
+
+        emit ListedNFT(_nft, _tokenId, _payToken, _price, msg.sender);
+    }
+
+    // @notice Cancel listed NFT
     function cancelListedNFT(address _nft, uint256 _tokenId)
         external
         isListedNFT(_nft, _tokenId)
@@ -268,7 +286,7 @@ contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
         listedNft.sold = true;
 
         uint256 totalPrice = _price;
-        DortzioNFT nft = DortzioNFT(listedNft.nft);
+        IDortzioNFT nft = IDortzioNFT(listedNft.nft);
         address royaltyRecipient = nft.getRoyaltyRecipient();
         uint256 royaltyFee = nft.getRoyaltyFee();
 
@@ -394,7 +412,7 @@ contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
         uint256 offerPrice = offer.offerPrice;
         uint256 totalPrice = offerPrice;
 
-        DortzioNFT nft = DortzioNFT(offer.nft);
+        IDortzioNFT nft = IDortzioNFT(offer.nft);
         address royaltyRecipient = nft.getRoyaltyRecipient();
         uint256 royaltyFee = nft.getRoyaltyFee();
 
@@ -551,7 +569,7 @@ contract DortzioNFTMarketPlace is Ownable, ReentrancyGuard{
         auction.success = true;
         auction.winner = auction.creator;
 
-        DortzioNFT dortzioNft = DortzioNFT(_nft);
+        IDortzioNFT dortzioNft = IDortzioNFT(_nft);
         address royaltyRecipient = dortzioNft.getRoyaltyRecipient();
         uint256 royaltyFee = dortzioNft.getRoyaltyFee();
 

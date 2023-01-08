@@ -16,6 +16,10 @@
 
 > ```sudo cp  /home/wildonion/.near-credentials/ /root/```
 
+## References
+
+* https://docs.near.org/tutorials/nfts/marketplace
+
 ## Smarties Marketplace Method Call Orders Example on Testnet
 
 > See the `test.sh` of the NFT and market contracts for other methods (like views) and their params.
@@ -270,3 +274,5 @@ pub struct Proposal{
     
 }
 ```
+
+

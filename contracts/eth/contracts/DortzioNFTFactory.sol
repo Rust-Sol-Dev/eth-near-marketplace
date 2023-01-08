@@ -2,8 +2,7 @@ pragma solidity ^0.8.4;
 
 import "./DortzioNFT.sol";
 
-/* 
-    Dortzio NFT Factory
+/* Dortzio NFT Factory
     Create new Dortzio NFT collection
 */
 contract DortzioNFTFactory {
