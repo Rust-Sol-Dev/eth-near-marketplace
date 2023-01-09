@@ -29,7 +29,7 @@ interface IDortzioNFT {
 
     • ERC1155 to buy NFT batch                
     • Deposit and Withdraw Token 
-    • NFT Metadata             
+    • NFT Update Metadata URI             
     • NFT Events   
     • List NFT          
     • Buy NFT

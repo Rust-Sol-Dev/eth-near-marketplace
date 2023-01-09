@@ -3,9 +3,9 @@
 
 ## ✨ Features
 
-* Deposit and Add Fund
+* Deposit and Withdraw Fund
 
-* Offer
+* NFT Offer
 
 * Auction Bid
 

@@ -2,11 +2,11 @@
 
 ## Notes
 
-* change the `network` parameter to `mainnet` for production.
+* change the `--network` parameter to `mainnet` for production.
 
 * remember to fill the `.env` file with appropriate parameters.
 
-* remember to charge your wallet using https://goerlifaucet.com/
+* remember to charge your wallet on testnet using https://goerlifaucet.com/
 
 * last deploy:
 ```console
@@ -37,13 +37,17 @@ npx hardhat test test/dortzio.ts --network goerli
 
 ## WIP
 
-* ERC1155 to buy NFT batch                
+* ERC1155
 
-* Deposit and Withdraw Token 
+* Contract Method Tests
 
-* Test methods
+* Deploy Contracts
 
 ## References
+
+* https://coinsbench.com/fully-decentralized-erc-721-and-erc-1155-nfts-6c229adf9c9b
+
+* https://github.com/cryptonomicon46/ERC1155
 
 * https://github.com/kofkuiper/kuiper-nft-marketplace
 
