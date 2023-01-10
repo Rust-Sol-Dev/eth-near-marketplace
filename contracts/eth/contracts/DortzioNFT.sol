@@ -6,17 +6,18 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Strings.sol"; 
 
 /* Dortzio NFT-ERC721 */
 contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
     
     using Counters for Counters.Counter;
     mapping (uint256 => string) private _tokenURIs;
-
     Counters.Counter private _tokenIdCounter;
-
     uint256 private royaltyFee;
     address private royaltyRecipient;
+    string private _baseTokenURI;
+    bool public revealed = false;
 
     constructor(
         string memory _name,
@@ -32,9 +33,22 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         transferOwnership(_owner);
     }
 
+    function _baseURI() internal view virtual override returns (string memory){
+        return _baseTokenURI;
+    }
+
+    function reveal() external onlyOwner {
+        revealed = true;
+    }
+
+    function setBaseURI(string calldata baseURI) external onlyOwner {
+        _baseTokenURI = baseURI;
+    }
+
     function safeMint(address to, string memory uri) public onlyOwner {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
+        _tokenURIs[tokenId] = uri;
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
     }
@@ -54,7 +68,12 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         override(ERC721, ERC721URIStorage)
         returns (string memory)
     {
-        return super.tokenURI(tokenId);
+        // return super.tokenURI(tokenId);
+        require(_exists(tokenId), "token with this id doesn't exist");
+        string memory baseURI = _baseURI();
+        string memory metadataPointerId = !revealed ? 'unrevealed' : Strings.toString(tokenId);
+        string memory result = string(abi.encodePacked(baseURI, metadataPointerId, '.json'));
+        return bytes(baseURI).length != 0 ? result : '';
     }
 
     function getRoyaltyFee() external view returns (uint256) {

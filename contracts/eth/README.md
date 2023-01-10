@@ -2,6 +2,8 @@
 
 ## Notes
 
+* contract owner is the collection creator
+
 * change the `--network` parameter to `mainnet` for production.
 
 * remember to fill the `.env` file with appropriate parameters.
@@ -10,8 +12,8 @@
 
 * last deploy:
 ```console
-DortzioNFTFactory deployed to:  0x43C9b9B30178375d40eB41F30D40A0B0F47a8748
-DortzioNFTMarketplace deployed to:  0xDBB6399E7cb66E5469bD211Cd7d3F5EAd7136C92
+DortzioNFTFactory deployed to:  0xD10B797Dbf591b1B56F47268e5A2B8c314D9824B
+DortzioNFTMarketplace deployed to:  0xC3f16594A6A89Df60A4E3fC2F780496623e27789
 ```
 
 ## Setup
@@ -37,13 +39,11 @@ npx hardhat test test/dortzio.ts --network goerli
 
 ## WIP
 
-* ERC1155
-
-* Contract Method Tests
-
-* Deploy Contracts
+* ERC1155 for Batch Minting and Launchpad Feature
 
 ## References
+
+* https://medium.com/coinmonks/how-to-make-your-nfts-reveal-in-solidity-d231ec8413c6
 
 * https://coinsbench.com/fully-decentralized-erc-721-and-erc-1155-nfts-6c229adf9c9b
 

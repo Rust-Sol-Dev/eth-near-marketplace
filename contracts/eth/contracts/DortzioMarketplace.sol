@@ -11,13 +11,11 @@ interface IDortzioNFTFactory {
         string memory _symbol,
         uint256 _royaltyFee
     ) external;
-
     function isdortzioNFT(address _nft) external view returns (bool);
 }
 
 interface IDortzioNFT {
     function getRoyaltyFee() external view returns (uint256);
-
     function getRoyaltyRecipient() external view returns (address);
 }
 
@@ -26,6 +24,8 @@ interface IDortzioNFT {
     -------------------
     the market contract
     -------------------
+    
+    ** msg.sender IS THE CONTRACT OWNER WHICH IS THE COLLECTION CREATOR ** 
 
     • ERC1155 to buy NFT batch                
     • Deposit and Withdraw Token 
@@ -234,7 +234,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         _;
     }
 
-    // @notice List NFT on Marketplace
+    // List NFT on Marketplace
     function listNft(
         address _nft,
         uint256 _tokenId,
@@ -257,7 +257,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         emit ListedNFT(_nft, _tokenId, _payToken, _price, msg.sender);
     }
 
-    // @notice Cancel listed NFT
+    // Cancel listed NFT
     function cancelListedNFT(address _nft, uint256 _tokenId)
         external
         isListedNFT(_nft, _tokenId)
@@ -268,7 +268,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         delete listNfts[_nft][_tokenId];
     }
 
-    // @notice Buy listed NFT
+    // Buy listed NFT
     function buyNFT(
         address _nft,
         uint256 _tokenId,
@@ -334,7 +334,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         );
     }
 
-    // @notice Offer listed NFT
+    // Offer listed NFT
     function offerNFT(
         address _nft,
         uint256 _tokenId,
@@ -368,7 +368,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         );
     }
 
-    // @notice Offerer cancel offerring
+    // Offerer cancel offerring
     function cancelOfferNFT(address _nft, uint256 _tokenId)
         external
         isOfferredNFT(_nft, _tokenId, msg.sender)
@@ -387,7 +387,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         );
     }
 
-    // @notice listed NFT owner accept offerring
+    // listed NFT owner accept offerring
     function acceptOfferNFT(
         address _nft,
         uint256 _tokenId,
@@ -450,7 +450,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         );
     }
 
-    // @notice Create autcion
+    // Create autcion
     function createAuction(
         address _nft,
         uint256 _tokenId,
@@ -493,7 +493,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         );
     }
 
-    // @notice Cancel auction
+    // Cancel auction
     function cancelAuction(address _nft, uint256 _tokenId)
         external
         isAuction(_nft, _tokenId)
@@ -508,7 +508,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         delete auctionNfts[_nft][_tokenId];
     }
 
-    // @notice Bid place auction
+    // Bid place auction
     function bidPlace(
         address _nft,
         uint256 _tokenId,
@@ -548,7 +548,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         emit PlacedBid(_nft, _tokenId, auction.payToken, _bidPrice, msg.sender);
     }
 
-    // @notice Result auction, can call by auction creator, heighest bidder, or marketplace owner only!
+    // Result auction, can call by auction creator, heighest bidder, or marketplace owner only!
     function resultAuction(address _nft, uint256 _tokenId) external {
         require(!auctionNfts[_nft][_tokenId].success, "already resulted");
         require(
