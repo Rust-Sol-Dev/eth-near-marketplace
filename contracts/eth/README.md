@@ -39,7 +39,9 @@ npx hardhat test test/dortzio.ts --network goerli
 
 ## WIP
 
-* ERC1155 for Batch Minting and Launchpad Feature
+* ERC1155 contract for batch minting
+
+* deposit and withdraw methods
 
 ## References
 
