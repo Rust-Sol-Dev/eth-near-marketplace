@@ -26,18 +26,8 @@ interface IDortzioNFT {
     -------------------
     
     ** msg.sender IS THE CONTRACT OWNER WHICH IS THE COLLECTION CREATOR ** 
-
-    • ERC1155 to buy NFT batch                
-    • Deposit and Withdraw Token 
-    • NFT Update Metadata URI             
-    • NFT Events   
-    • List NFT          
-    • Buy NFT
-    • Offer NFT
-    • Accept Offer
-    • Create Auction 
-    • Place A Bid
-    • Royalty 
+    
+    
 
 */
 contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
@@ -78,6 +68,9 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         address winner;
         bool success;
     }
+
+
+    mapping (address => uint) public escrowAmount;
 
     mapping(address => bool) private payableToken;
     address[] private tokens;
@@ -359,6 +352,10 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
             accepted: false
         });
 
+
+        escrowAmount[msg.sender] += _offerPrice;
+
+
         emit OfferredNFT(
             nft.nft,
             nft.tokenId,
@@ -376,7 +373,9 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         OfferNFT memory offer = offerNfts[_nft][_tokenId][msg.sender];
         require(offer.offerer == msg.sender, "not offerer");
         require(!offer.accepted, "offer already accepted");
+        require(offer.offerPrice <= escrowAmount[msg.sender], "cancelOffer: lower amount in escrow  ");
         delete offerNfts[_nft][_tokenId][msg.sender];
+        escrowAmount[msg.sender] -= offer.offerPrice;
         IERC20(offer.payToken).transfer(offer.offerer, offer.offerPrice);
         emit CanceledOfferredNFT(
             offer.nft,
@@ -412,6 +411,8 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         uint256 offerPrice = offer.offerPrice;
         uint256 totalPrice = offerPrice;
 
+        require(offerPrice <= escrowAmount[offer.offerer], "acceptOffer: lower amount in escrow");
+
         IDortzioNFT nft = IDortzioNFT(offer.nft);
         address royaltyRecipient = nft.getRoyaltyRecipient();
         uint256 royaltyFee = nft.getRoyaltyFee();
@@ -432,6 +433,9 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
 
         // Transfer to seller
         payToken.transfer(list.seller, totalPrice - platformFeeTotal);
+
+
+        escrowAmount[offer.offerer] -= offerPrice;
 
         // Transfer NFT to offerer
         IERC721(list.nft).safeTransferFrom(
@@ -655,5 +659,21 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
     function changeFeeRecipient(address _feeRecipient) external onlyOwner {
         require(_feeRecipient != address(0), "can't be 0 address");
         feeRecipient = _feeRecipient;
+    }
+
+    function depositEscrow() external payable returns (bool) {
+        escrowAmount[msg.sender] += msg.value;
+        return true;
+
+    }
+
+    function withdrawEscrow(
+        uint256 _amount
+    ) external returns (bool) {
+        require(_amount < escrowAmount[msg.sender], "withdrawEscrow: lower amount");
+        payable(msg.sender).transfer(_amount);
+        escrowAmount[msg.sender] -= _amount;
+        return true;
+
     }
 }

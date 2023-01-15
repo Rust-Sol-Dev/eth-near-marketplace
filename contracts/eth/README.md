@@ -10,7 +10,7 @@
 
 * remember to charge your wallet on testnet using https://goerlifaucet.com/
 
-* last deploy:
+* example deploy output:
 ```console
 DortzioNFTFactory deployed to:  0xD10B797Dbf591b1B56F47268e5A2B8c314D9824B
 DortzioNFTMarketplace deployed to:  0xC3f16594A6A89Df60A4E3fC2F780496623e27789
@@ -37,19 +37,45 @@ npx hardhat run scripts/deploy.ts --network goerli
 npx hardhat test test/dortzio.ts --network goerli
 ```
 
-## WIP
+# 🍟 Features
 
-* ERC1155 contract for batch minting
+* ERC1155 and ERC721 Contracts
 
-* deposit and withdraw methods
+* Deposit and Withdraw Token For Offer
+
+* NFT Update Metadata URI             
+
+* NFT Events   
+
+* List NFT          
+
+* Buy NFT
+
+* Offer NFT
+
+* Accept Offer
+
+* Create Auction 
+
+* Place A Bid
+
+* Royalty 
 
 ## References
+
+* https://github.com/nazhG/ERC1155-Marketplace/
+
+* https://github.com/Mowgli9/ERC1155-NFT-Marketplace
+
+* https://github.com/TronzitVeca/ERC1155-Marketplace-Contract/blob/main/contracts/marketplace.sol
+
+* https://github.com/saibaneer/erc1155-Marketplace
+
+* https://coinsbench.com/fully-decentralized-erc-721-and-erc-1155-nfts-6c229adf9c9b
 
 * https://medium.com/coinmonks/how-to-make-your-nfts-reveal-in-solidity-d231ec8413c6
 
 * https://coinsbench.com/fully-decentralized-erc-721-and-erc-1155-nfts-6c229adf9c9b
-
-* https://github.com/cryptonomicon46/ERC1155
 
 * https://github.com/kofkuiper/kuiper-nft-marketplace
 
