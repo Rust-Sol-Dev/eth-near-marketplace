@@ -34,13 +34,13 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
     IDortzioNFTFactory private immutable dortzioNFTFactory;
 
     uint256 private platformFee;
-    address private feeRecipient;
+    address private feeRecipient; // the address of the marketplace account that will receive the fee of the platform
 
     struct ListNFT {
         address nft;
         uint256 tokenId;
         address seller;
-        address payToken;
+        address payToken; // buyer
         uint256 price;
         bool sold;
     }

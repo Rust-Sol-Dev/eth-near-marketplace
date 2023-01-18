@@ -1,12 +1,11 @@
-// contracts/GameMarketplace.sol
-// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.8;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Receiver.sol";
-import "./IGetFreeItems.sol";
+import "./IGetFreeNFTs.sol";
 import "hardhat/console.sol";
 
 contract AuctionAndBids is ReentrancyGuard {
@@ -16,8 +15,8 @@ contract AuctionAndBids is ReentrancyGuard {
     mapping(uint256 => Auction) private IdToAuction;
     mapping(address => mapping(uint=>uint)) private BidersBalances; // balance of each bidder
     address public platFormAddress;
-    IGetFreeItems getFreeItem;
-    address private getFreeItemsAddress;
+    IGetFreeNFTs getFreeNFT;
+    address private getFreeNFTsAddress;
 
     struct Auction {
         uint256 id;
@@ -31,11 +30,11 @@ contract AuctionAndBids is ReentrancyGuard {
         uint256 itemId;
     }
 
-    constructor(address _getFreeItemAddress) {
-        getFreeItem = IGetFreeItems(_getFreeItemAddress);
+    constructor(address _getFreeNFTAddress) {
+        getFreeNFT = IGetFreeNFTs(_getFreeNFTAddress);
         platFormAddress = address(0);
-        getFreeItemsAddress = _getFreeItemAddress;
-        console.log("ADDRESS '%s' ",getFreeItemsAddress );
+        getFreeNFTsAddress = _getFreeNFTAddress;
+        console.log("ADDRESS '%s' ",getFreeNFTsAddress );
     }
 
     // ------------- Events ------------
@@ -96,9 +95,9 @@ contract AuctionAndBids is ReentrancyGuard {
         IdToAuction[currentBidId].highestBid = _firstBid;
         IdToAuction[currentBidId].seller = payable(msg.sender);
         IdToAuction[currentBidId].itemId = _itemId;
-        getFreeItem.changeOwner(address(this), _itemId);
-        getFreeItem.changeState(_itemId);
-        IERC1155(getFreeItemsAddress).safeTransferFrom(
+        getFreeNFT.changeOwner(address(this), _itemId);
+        getFreeNFT.changeState(_itemId);
+        IERC1155(getFreeNFTsAddress).safeTransferFrom(
             msg.sender,
             address(this),
             _itemId,
@@ -133,7 +132,7 @@ contract AuctionAndBids is ReentrancyGuard {
     }
 
     // end the auction everyone can call this function require timeend
-
+    // TODO - royalty
     function endAuction(uint256 _auctionId) external nonReentrant {
         uint256 endTime = IdToAuction[_auctionId].endAt;
         bool isStarted = IdToAuction[_auctionId].start;
@@ -147,9 +146,9 @@ contract AuctionAndBids is ReentrancyGuard {
         uint256 itemId = IdToAuction[_auctionId].itemId;
         IdToAuction[_auctionId].end = true;
         IdToAuction[_auctionId].start = false;
-        getFreeItem.changeOwner(address(this), itemId);
-        getFreeItem.changeState(itemId);
-        IERC1155(getFreeItemsAddress).safeTransferFrom(
+        getFreeNFT.changeOwner(address(this), itemId);
+        getFreeNFT.changeState(itemId);
+        IERC1155(getFreeNFTsAddress).safeTransferFrom(
             address(this),
             highestBidder,
             itemId,
@@ -174,9 +173,9 @@ contract AuctionAndBids is ReentrancyGuard {
         uint256 itemId = IdToAuction[_auctionId].itemId;
         IdToAuction[_auctionId].end = true;
         IdToAuction[_auctionId].start = false;
-        getFreeItem.changeOwner(address(this), itemId);
-        getFreeItem.changeState(itemId);
-        IERC1155(getFreeItemsAddress).safeTransferFrom(
+        getFreeNFT.changeOwner(address(this), itemId);
+        getFreeNFT.changeState(itemId);
+        IERC1155(getFreeNFTsAddress).safeTransferFrom(
             address(this),
             msg.sender,
             itemId,

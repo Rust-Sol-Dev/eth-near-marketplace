@@ -1,11 +1,10 @@
-// contracts/GameMarketplace.sol
-// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.8;
 
 interface IBuyAndSell {
     struct PRODUCT {
         uint256 id;
-        uint256 itemId;
+        uint256 NFTId;
         uint256 price;
         bool isSold;
         address seller;
@@ -24,7 +23,7 @@ interface IBuyAndSell {
         address buyer
     );
 
-    function putProductToSell(uint256 _itemId, uint256 _price) external;
+    function putProductToSell(uint256 _NFTId, uint256 _price) external;
 
     function purchaseProduct(uint256 _productId) external payable;
 

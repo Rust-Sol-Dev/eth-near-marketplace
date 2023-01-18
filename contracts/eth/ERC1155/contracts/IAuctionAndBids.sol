@@ -1,6 +1,4 @@
 
-// contracts/GameMarketplace.sol
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
 interface IAuctionAndBids {
@@ -12,7 +10,7 @@ interface IAuctionAndBids {
         address payable highestBidder;
         uint256 highestBid;
         address payable seller;
-        uint256 itemId;
+        uint256 NFTId;
     }
     event AuctionCreated(
         uint256 indexed acutionId,
@@ -42,10 +40,10 @@ interface IAuctionAndBids {
     event AuctionCanceled(
         uint indexed auctionId,
         address indexed seller,
-        uint indexed itemId
+        uint indexed NFTId
     );
     
-    function createAuction(uint256 _itemId,uint256 _endAt,uint256 _firstBid) external;
+    function createAuction(uint256 _NFTId,uint256 _endAt,uint256 _firstBid) external;
     function bid(uint256 _auctionId) external payable;
     function endAuction(uint256 _auctionId) external;
     function cancelAuction(uint _auctionId) external;

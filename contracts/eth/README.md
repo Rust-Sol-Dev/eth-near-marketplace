@@ -18,6 +18,8 @@ DortzioNFTMarketplace deployed to:  0xC3f16594A6A89Df60A4E3fC2F780496623e27789
 
 ## Setup
 
+0. Change directory to `ERC721` or `ERC1155`
+
 1. Install packages.
 ```bash
 npm install
@@ -41,6 +43,8 @@ npx hardhat test test/dortzio.ts --network goerli
 
 * ERC1155 and ERC721 Contracts
 
+* Batch Buying and Minting 
+
 * Deposit and Withdraw Token For Offer
 
 * NFT Update Metadata URI             
@@ -61,9 +65,12 @@ npx hardhat test test/dortzio.ts --network goerli
 
 * Royalty 
 
-## WIP
+# WIPs
 
-* ERC1155
+* ERC1155 Royalty for Auction, Buy (Batch and Single) and Offer
+
+* ERC1155 Offer
+
 
 ## References
 
