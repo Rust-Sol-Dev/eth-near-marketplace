@@ -2,7 +2,7 @@
 
 ## Notes
 
-* contract owner is the collection creator
+* contract owner is the collection creator in ERC721
 
 * change the `--network` parameter to `mainnet` for production.
 
