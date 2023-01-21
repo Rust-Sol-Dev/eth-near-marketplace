@@ -67,11 +67,7 @@ npx hardhat test test/dortzio.ts --network goerli
 
 # WIPs
 
-* ERC1155 Royalty for Auction, Buy (Batch and Single) and Offer
-
-* ERC1155 Offer
-
-* Market Fee
+* ERC1155 Royalty Batch and Offer
 
 ## References
 

@@ -1,7 +1,7 @@
 
 pragma solidity ^0.8.8;
 
-interface IGetFreeNFTs {
+interface INFT {
 
     struct NFT {
         uint256 id;

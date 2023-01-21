@@ -25,6 +25,7 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
     string private _baseTokenURI;
     bool public revealed = false;
 
+
     constructor(
         string memory _name,
         string memory _symbol,
@@ -59,6 +60,27 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         _setTokenURI(tokenId, uri);
     }
 
+    function totalNFTsMinted() external view returns (uint256) {
+        return _tokenIdCounter.current();
+    }
+
+    function batchMint(address to, 
+                      string[] memory tokenUris, 
+                      RoyaltyInfo[] memory royaltyInfo
+                      ) public onlyOwner{
+
+    
+        for (uint256 i = 0; i < tokenUris.length; i++) {
+            uint256 tokenId = _tokenIdCounter.current();
+            _tokenIdCounter.increment();
+            _tokenURIs[tokenId] = tokenUris[i];
+            _tokenRoyaltyInfo[tokenId] = royaltyInfo[i];
+            _safeMint(to, tokenId);
+            _setTokenURI(tokenId, tokenUris[i]);            
+        }
+    } 
+
+
     // The following functions are overrides required by Solidity.
 
     function _burn(uint256 tokenId)
@@ -80,6 +102,18 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         string memory metadataPointerId = !revealed ? 'unrevealed' : Strings.toString(tokenId);
         string memory result = string(abi.encodePacked(baseURI, metadataPointerId, '.json'));
         return bytes(baseURI).length != 0 ? result : '';
+    }
+
+    function setTokenURIs(string[] memory newtokenUris, uint256[] memory ids)
+        public
+        onlyContract
+        
+    {   
+        for (uint256 i = 0; i < ids.length; i++) {
+            require(_exists(ids[i]), "token with this id doesn't exist");
+            _tokenURIs[ids[i]] = newtokenUris[ids[i]];
+        }
+        
     }
 
     function getRoyaltyFee() external view returns (uint256) {

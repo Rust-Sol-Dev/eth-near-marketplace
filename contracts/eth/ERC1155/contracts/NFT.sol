@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
 
-contract GetFreeNFTs is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
+contract NFT is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
     using EnumerableSet for EnumerableSet.UintSet;
     using Counters for Counters.Counter;
     Counters.Counter private itemId;
@@ -19,8 +19,7 @@ contract GetFreeNFTs is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
     mapping(uint256 => RoyaltyInfo[]) private _tokenRoyaltyInfo; // NFT id => royalty
     mapping (uint256 => string) private _tokenURIs;
     mapping(uint256 => uint256) public tokensHeldBalances; // id => balance (amount held not for sale)
-    uint256 private royaltyFee;
-    address private royaltyRecipient;
+
 
 
     struct RoyaltyInfo {
@@ -113,6 +112,8 @@ contract GetFreeNFTs is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
         require(tokenUris.length == amounts.length , "Ids and TokenUri length mismatch");
         _mintBatch(to, ids, amounts, "");
         for (uint256 i = 0; i < ids.length; i++) {
+            require(royaltyInfo[i].royaltyFee <= 10000, "can't more than 10 percent");
+            require(royaltyInfo[i].receiver != address(0));
             require(amounts[i] > 0);
             if (tokensHeldBalances[ids[i]] == 0) {
                 uint256 currentId = itemId.current();
@@ -123,7 +124,7 @@ contract GetFreeNFTs is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
                 IdToNFT[currentId].royaltyinfo = royaltyInfo;
                 _tokenURIs[currentId] = tokenUris[i];
                 tokensHeldBalances[currentId] += amounts[i];
-                _tokenRoyaltyInfo[currentId] = royaltyInfo;
+                _tokenRoyaltyInfo[currentId] = royaltyInfo[i];
                 emit FreeNFTMinted(currentId, msg.sender);
             }
         }

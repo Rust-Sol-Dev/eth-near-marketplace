@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "./IGetFreeNFTs.sol";
+import "./INFT.sol";
 
 
 contract BuyAndSell is ReentrancyGuard {
@@ -15,9 +15,10 @@ contract BuyAndSell is ReentrancyGuard {
     using EnumerableSet for EnumerableSet.UintSet;
 
     Counters.Counter private productId;
-    address public getFreeNFTsAddress;
-    IGetFreeNFTs getFreeNFT;
+    address public NFTAddress;
+    INFT getFreeNFT;
     address public platFormAddress;
+    uint256 private platformFee;
     mapping(uint256 => PRODUCT) private IdToProduct;
     mapping(address => uint256[]) private UserToSoldNFTs;
     EnumerableSet.UintSet private _tokensForPackSale; // all ids for pack sale
@@ -63,10 +64,13 @@ contract BuyAndSell is ReentrancyGuard {
         address indexed seller
     );
 
-    constructor(address _getFreeNFTsAddress) {
-        getFreeNFT = IGetFreeNFTs(_getFreeNFTsAddress);
-        platFormAddress = address(0);
-        getFreeNFTsAddress = _getFreeNFTsAddress;
+    constructor(address _NFTAddress
+                uint256 _platformFee,
+                address _feeRecipient) {
+        getFreeNFT = INFT(_NFTAddress);
+        platformFee = _platformFee;
+        platFormAddress = _feeRecipient;
+        NFTAddress = _NFTAddress;
 
     }
 
@@ -90,7 +94,7 @@ contract BuyAndSell is ReentrancyGuard {
         IdToProduct[currentProductId].isSold = false;
         IdToProduct[currentProductId].seller = msg.sender;
         IdToProduct[currentProductId].itemId = _itemId;
-        IERC1155(getFreeNFTsAddress).safeTransferFrom(
+        IERC1155(NFTAddress).safeTransferFrom(
             msg.sender,
             address(this),
             _itemId,
@@ -114,8 +118,6 @@ contract BuyAndSell is ReentrancyGuard {
     // ------------ Normal Buy Method -----------
     // require msg.value => price
     // product still availaibe
-
-    // TODO - royalty
     function purchaseProduct(uint256 _productId) external payable nonReentrant {
         uint256 price = IdToProduct[_productId].price;
         bool isSold = IdToProduct[_productId].isSold;
@@ -132,8 +134,7 @@ contract BuyAndSell is ReentrancyGuard {
         require(sent2, "failed");
         // -------
         uint256 itemId = IdToProduct[_productId].itemId;
-        getFreeNFT.changeOwner(msg.sender, itemId);
-        getFreeNFT.changeState(itemId);
+        
         
         //--------------------
         // royalty calculation
@@ -146,27 +147,39 @@ contract BuyAndSell is ReentrancyGuard {
             uint256 royaltyFee = nft.getRoyaltyFee();
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
-                IERC20(getFreeNFTsAddress).transferFrom(
+                // Transfer royalty fee to collection owner
+                IERC20(NFTAddress).transferFrom(
                     msg.sender,
                     royaltyRecipient,
                     royaltyTotal
                 );
                 totalPrice -= royaltyTotal;
             }
+            // Transfer to nft owner
+            IERC20(NFTAddress).transferFrom(
+                msg.sender,
+                listedNft.seller,
+                totalPrice - platformFeeTotal
+            );
+
         }
-
         // Calculate & Transfer platfrom fee
-        // ...
-
-        // Transfer to nft owner
-        // ...
-
+        uint256 platformFeeTotal = calculatePlatformFee(price);
+        IERC20(NFTAddress).transferFrom(
+            msg.sender,
+            feeRecipient,
+            platformFeeTotal
+        );
         //--------------------
+        //--------------------
+
+        getFreeNFT.changeOwner(msg.sender, itemId);
+        getFreeNFT.changeState(itemId);
         
         UserToSoldNFTs[seller].push(itemId);
         IdToProduct[_productId].isSold = true;
-        // transfer NFT
-        IERC1155(getFreeNFTsAddress).safeTransferFrom(
+        // transfer NFT to buyer
+        IERC1155(NFTAddress).safeTransferFrom(
             address(this),
             msg.sender,
             itemId,
@@ -186,7 +199,7 @@ contract BuyAndSell is ReentrancyGuard {
         getFreeNFT.changeOwner(msg.sender, itemId);
         getFreeNFT.changeState(itemId);
         IdToProduct[_productId].isSold = true;
-        IERC1155(getFreeNFTsAddress).safeTransferFrom(
+        IERC1155(NFTAddress).safeTransferFrom(
             address(this),
             msg.sender,
             itemId,
@@ -247,7 +260,7 @@ contract BuyAndSell is ReentrancyGuard {
         tokensHeldBalances[id] += amount;
     }
 
-    function buyPack() public payable {
+    function buyPack() public payable { // buy 4 random nfts
         uint256 totalNFTsAvailable; // sums together each id's balance
         for (uint256 i = 0; i < _tokensForPackSale.length(); i++) {
             totalNFTsAvailable += tokensForPackSaleBalances[
@@ -325,7 +338,7 @@ contract BuyAndSell is ReentrancyGuard {
                 uint256 royaltyFee = nft.getRoyaltyFee();
                 if (royaltyFee > 0) {
                     uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
-                    IERC20(getFreeNFTsAddress).transferFrom(
+                    IERC20(NFTAddress).transferFrom(
                         msg.sender,
                         royaltyRecipient,
                         royaltyTotal
@@ -333,6 +346,8 @@ contract BuyAndSell is ReentrancyGuard {
                     totalPrice -= royaltyTotal;
                 }
             }
+
+            // TODO - royalty
 
             // Calculate & Transfer platfrom fee
             // ...
@@ -350,7 +365,7 @@ contract BuyAndSell is ReentrancyGuard {
 
         uint256[] product_amounts = nft.gettokensHeldBalances(productIds);
 
-        IERC1155(getFreeNFTsAddress).safeBatchTransferFrom(
+        IERC1155(NFTAddress).safeBatchTransferFrom(
             address(this),
             msg.sender,
             productIds,
