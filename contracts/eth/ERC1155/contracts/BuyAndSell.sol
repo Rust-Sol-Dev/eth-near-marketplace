@@ -16,7 +16,7 @@ contract BuyAndSell is ReentrancyGuard {
 
     Counters.Counter private productId;
     address public NFTAddress;
-    INFT getFreeNFT;
+    INFT getNFT;
     address public platFormAddress;
     uint256 private platformFee;
     mapping(uint256 => PRODUCT) private IdToProduct;
@@ -24,10 +24,21 @@ contract BuyAndSell is ReentrancyGuard {
     EnumerableSet.UintSet private _tokensForPackSale; // all ids for pack sale
     mapping(uint256 => uint256) public tokensForPackSaleBalances; // id => balance (amount for single sale)
     uint256 public packPrice;
+    // nft => tokenId => offerer address => offer struct
+    mapping(address => mapping(uint256 => mapping(address => OfferNFT)))
+        private offerNfts;
+
 
     struct RoyaltyInfo {
         address receiver;
         uint256 royaltyFee;
+    }
+
+    struct OfferNFT {
+        uint256 tokenId;
+        address offerer;
+        uint256 offerPrice;
+        bool accepted;
     }
 
     struct NFT {
@@ -64,20 +75,189 @@ contract BuyAndSell is ReentrancyGuard {
         address indexed seller
     );
 
+    event OfferredNFT(
+        uint256 indexed tokenId,
+        uint256 offerPrice,
+        address indexed offerer
+    );
+    event CanceledOfferredNFT(
+        uint256 indexed tokenId,
+        uint256 offerPrice,
+        address indexed offerer
+    );
+    event AcceptedNFT(
+        uint256 indexed tokenId,
+        uint256 offerPrice,
+        address offerer,
+        address indexed nftOwner
+    );
+
     constructor(address _NFTAddress
                 uint256 _platformFee,
                 address _feeRecipient) {
-        getFreeNFT = INFT(_NFTAddress);
+        getNFT = INFT(_NFTAddress);
         platformFee = _platformFee;
         platFormAddress = _feeRecipient;
         NFTAddress = _NFTAddress;
 
     }
 
+    // Offer listed NFT
+    function offerNFT(
+        uint256 _tokenId,
+        uint256 _productId,
+        uint256 _offerPrice,
+        address _offerer
+    ) external{
+        require(_offerPrice > 0, "price can not 0");
+        
+        NFT nft = getNFT.getNFTDetails(_tokenId);
+        PRODUCT memory product = IdToProduct[_productId];
+        require(
+            product.itemId == _tokenId,
+            "nft is not listed"
+        );
+        require(
+            product.seller != address(0) && !product.isSold,
+            "nft is already sold out"
+        );
+                
+                
+        IERC20(NFTAddress).transferFrom(
+            msg.sender,
+            product.seller,
+            _offerPrice
+        );
+
+        offerNfts[NFTAddress][_tokenId][msg.sender] = OfferNFT({
+            tokenId: nft.tokenId,
+            offerer: msg.sender,
+            offerPrice: _offerPrice,
+            accepted: false
+        });
+
+
+        emit OfferredNFT(
+            _tokenId,
+            _offerPrice,
+            msg.sender
+        );
+    }
+
+    // Offerer cancel offerring
+    function cancelOfferNFT(uint256 _tokenId) external
+    {   
+        OfferNFT memory offer = offerNfts[NFTAddress][_tokenId][_offerer];
+        require(
+            offer.offerPrice > 0 && offer.offerer != address(0),
+            "not offerred nft"
+        );
+        PRODUCT memory product = IdToProduct[_productId];
+        require(
+            product.itemId == _tokenId,
+            "nft is not listed"
+        );
+        require(
+            product.seller != address(0) && !product.isSold,
+            "nft is already sold out"
+        );
+
+        OfferNFT memory offer = offerNfts[NFTAddress][_tokenId][msg.sender];
+        require(offer.offerer == msg.sender, "not offerer");
+        require(!offer.accepted, "offer already accepted");
+        delete offerNfts[NFTAddress][_tokenId][msg.sender];
+        IERC20(offer.payToken).transfer(offer.offerer, offer.offerPrice);
+        emit CanceledOfferredNFT(
+            offer.tokenId,
+            offer.offerPrice,
+            msg.sender
+        );
+    }
+
+    // listed NFT owner accept offerring
+    function acceptOfferNFT(
+        uint256 _tokenId,
+        address _offerer
+    ) external
+    {
+        
+
+        OfferNFT memory offer = offerNfts[NFTAddress][_tokenId][_offerer];
+        require(
+            offer.offerPrice > 0 && offer.offerer != address(0),
+            "not offerred nft"
+        );
+
+        NFT nft = getNFT.getNFTDetails(_tokenId);
+        PRODUCT memory product = IdToProduct[_productId];
+        require(
+            product.itemId == _tokenId,
+            "nft is not listed"
+        );
+        require(
+            product.seller != address(0) && !product.isSold,
+            "nft is already sold out"
+        );
+
+        require(
+            product.seller == msg.sender,
+            "seller is not the owner"
+        );
+        OfferNFT storage offer = offerNfts[NFTAddress][_tokenId][_offerer];
+        require(!product.isSold, "already sold");
+        require(!offer.accepted, "offer already accepted");
+
+        product.sold = true;
+        offer.accepted = true;
+
+        uint256 offerPrice = offer.offerPrice;
+        uint256 totalPrice = offerPrice;
+
+        IERC20 payToken = IERC20(NFTAddress);
+        NFT nft = getFreeNFT.getNFTDetails(itemId);
+        RoyaltyInfo[] royalties = nft.royaltyinfo; 
+        for (r = 0; r <= royalties.length; r++){
+            address royaltyRecipient = royalties[r].receiver;
+            uint256 royaltyFee = royalties[r].royaltyFee;
+            if (royaltyFee > 0) {
+                uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
+                // Transfer royalty fee to collection owner
+                payToken.transfer(royaltyRecipient, royaltyTotal);
+                totalPrice -= royaltyTotal;
+            }
+
+        }
+
+
+        // Calculate & Transfer platfrom fee
+        uint256 platformFeeTotal = calculatePlatformFee(offerPrice);
+        payToken.transfer(feeRecipient, platformFeeTotal);
+
+        // Transfer to seller
+        payToken.transfer(product.seller, totalPrice - platformFeeTotal);
+
+        // Transfer NFT to offerer
+        IERC1155(NFTAddress).safeTransferFrom(
+            address(this),
+            offer.offerer,
+            product.itemId,
+            1,
+            ""
+        );
+
+        emit AcceptedNFT(
+            offer.tokenId,
+            offer.offerPrice,
+            offer.offerer,
+            product.seller
+        );
+    }
+
+
     // -------------------- MARKETPLACE ----------------
     // put Product to sell = >
     // require price > 0
-
+    
     function putProductToSell(uint256 _itemId, uint256 _price)
         external
         nonReentrant
@@ -86,8 +266,8 @@ contract BuyAndSell is ReentrancyGuard {
         uint256 pricePlusFees = _price + (_price / 100) * 1;
         productId.increment();
         uint256 currentProductId = productId.current();
-        getFreeNFT.changeOwner(address(this), _itemId);
-        getFreeNFT.changeState(_itemId);
+        getNFT.changeOwner(address(this), _itemId);
+        getNFT.changeState(_itemId);
 
         IdToProduct[currentProductId].id = currentProductId;
         IdToProduct[currentProductId].price = pricePlusFees;
@@ -123,15 +303,18 @@ contract BuyAndSell is ReentrancyGuard {
         bool isSold = IdToProduct[_productId].isSold;
         require(msg.value >= price, "amount < price");
         require(isSold == false, "Sold out");
-        uint256 seller_share = msg.value - ((msg.value * 1) / 100);
-        address seller = payable(IdToProduct[_productId].seller);
-        //paiment send eth to seller and owner
-        (bool sent, ) = seller.call{value: seller_share}("");
-        require(sent, "failed");
-        (bool sent2, ) = platFormAddress.call{
-            value: (msg.value - seller_share)
-        }("");
-        require(sent2, "failed");
+        //------------------------
+        // ANOTHER WAY OF ROYALTY
+        //------------------------
+        // uint256 seller_share = msg.value - ((msg.value * 1) / 100);
+        // address seller = payable(IdToProduct[_productId].seller);
+        // //paiment send eth to seller and owner
+        // (bool sent, ) = seller.call{value: seller_share}("");
+        // require(sent, "failed");
+        // (bool sent2, ) = platFormAddress.call{
+        //     value: (msg.value - seller_share)
+        // }("");
+        // require(sent2, "failed");
         // -------
         uint256 itemId = IdToProduct[_productId].itemId;
         
@@ -140,14 +323,14 @@ contract BuyAndSell is ReentrancyGuard {
         // royalty calculation
         //--------------------
         uint256 totalPrice = price;
-        NFT nft = getFreeNFT.getNFTDetails(itemId);
+        NFT nft = getNFT.getNFTDetails(itemId);
         RoyaltyInfo[] royalties = nft.royaltyinfo; 
         for (r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = nft.getRoyaltyRecipient();
-            uint256 royaltyFee = nft.getRoyaltyFee();
+            address royaltyRecipient = royalties[r].receiver;
+            uint256 royaltyFee = royalties[r].royaltyFee;
             if (royaltyFee > 0) {
-                uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
-                // Transfer royalty fee to collection owner
+                uint256 royaltyTotal = calculateRoyalty(royaltyFee, price);
+                // Transfer royalty fee to receivers
                 IERC20(NFTAddress).transferFrom(
                     msg.sender,
                     royaltyRecipient,
@@ -155,14 +338,16 @@ contract BuyAndSell is ReentrancyGuard {
                 );
                 totalPrice -= royaltyTotal;
             }
-            // Transfer to nft owner
+        }
+
+        // Transfer to nft owner
             IERC20(NFTAddress).transferFrom(
                 msg.sender,
-                listedNft.seller,
+                seller,
                 totalPrice - platformFeeTotal
             );
 
-        }
+
         // Calculate & Transfer platfrom fee
         uint256 platformFeeTotal = calculatePlatformFee(price);
         IERC20(NFTAddress).transferFrom(
@@ -173,8 +358,8 @@ contract BuyAndSell is ReentrancyGuard {
         //--------------------
         //--------------------
 
-        getFreeNFT.changeOwner(msg.sender, itemId);
-        getFreeNFT.changeState(itemId);
+        getNFT.changeOwner(msg.sender, itemId);
+        getNFT.changeState(itemId);
         
         UserToSoldNFTs[seller].push(itemId);
         IdToProduct[_productId].isSold = true;
@@ -196,8 +381,8 @@ contract BuyAndSell is ReentrancyGuard {
         require(product.seller == msg.sender, "not S");
         require(product.isSold == false, "sold out");
         uint256 itemId = product.itemId;
-        getFreeNFT.changeOwner(msg.sender, itemId);
-        getFreeNFT.changeState(itemId);
+        getNFT.changeOwner(msg.sender, itemId);
+        getNFT.changeState(itemId);
         IdToProduct[_productId].isSold = true;
         IERC1155(NFTAddress).safeTransferFrom(
             address(this),
@@ -313,31 +498,34 @@ contract BuyAndSell is ReentrancyGuard {
             bool isSold = IdToProduct[_productId[p]].isSold;
             require(msg.value >= price, "amount < price");
             require(isSold == false, "Sold out");
-            uint256 seller_share = msg.value - ((msg.value * 1) / 100);
-            address seller = payable(IdToProduct[_productId[p]].seller);
-            //paiment send eth to seller and owner
-            (bool sent, ) = seller.call{value: seller_share}("");
-            require(sent, "failed");
-            (bool sent2, ) = platFormAddress.call{
-                value: (msg.value - seller_share)
-            }("");
-            require(sent2, "failed");
+            //------------------------
+            // ANOTHER WAY OF ROYALTY
+            //------------------------
+            // uint256 seller_share = msg.value - ((msg.value * 1) / 100);
+            // address seller = payable(IdToProduct[_productId[p]].seller);
+            // //paiment send eth to seller and owner
+            // (bool sent, ) = seller.call{value: seller_share}("");
+            // require(sent, "failed");
+            // (bool sent2, ) = platFormAddress.call{
+            //     value: (msg.value - seller_share)
+            // }("");
+            // require(sent2, "failed");
             // -------
             uint256 itemId = IdToProduct[_productId[p]].itemId;
-            getFreeNFT.changeOwner(msg.sender, itemId);
-            getFreeNFT.changeState(itemId);
+            
             
             //--------------------
             // royalty calculation
             //--------------------
             uint256 totalPrice = price;
-            NFT nft = getFreeNFT.getNFTDetails(itemId);
+            NFT nft = getNFT.getNFTDetails(itemId);
             RoyaltyInfo[] royalties = nft.royaltyinfo; 
             for (r = 0; r <= royalties.length; r++){
-                address royaltyRecipient = nft.getRoyaltyRecipient();
-                uint256 royaltyFee = nft.getRoyaltyFee();
+                address royaltyRecipient = royalties[r].receiver;
+                uint256 royaltyFee = royalties[r].royaltyFee;
                 if (royaltyFee > 0) {
-                    uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
+                    uint256 royaltyTotal = calculateRoyalty(royaltyFee, price);
+                    // Transfer royalty fee to receivers
                     IERC20(NFTAddress).transferFrom(
                         msg.sender,
                         royaltyRecipient,
@@ -347,16 +535,26 @@ contract BuyAndSell is ReentrancyGuard {
                 }
             }
 
-            // TODO - royalty
+            // Transfer to nft owner
+            IERC20(NFTAddress).transferFrom(
+                msg.sender,
+                seller,
+                totalPrice - platformFeeTotal
+            );
+
 
             // Calculate & Transfer platfrom fee
-            // ...
-
-            // Transfer to nft owner
-            // ...
+            uint256 platformFeeTotal = calculatePlatformFee(price);
+            IERC20(NFTAddress).transferFrom(
+                msg.sender,
+                feeRecipient,
+                platformFeeTotal
+            );
 
             //--------------------
             
+            getNFT.changeOwner(msg.sender, itemId);
+            getNFT.changeState(itemId);
             UserToSoldNFTs[seller].push(itemId);
             IdToProduct[_productId[p]].isSold = true;
             emit NFTsSold(_productId[p], itemId, seller_share, msg.sender);

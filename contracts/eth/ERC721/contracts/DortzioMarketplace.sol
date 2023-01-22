@@ -261,6 +261,9 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         delete listNfts[_nft][_tokenId];
     }
 
+    //-----------------------------------------------
+    // for buy batch just create a batch tx in front
+    //-----------------------------------------------
     // Buy listed NFT
     function buyNFT(
         address _nft,

@@ -146,8 +146,6 @@ contract AuctionAndBids is ReentrancyGuard {
         IdToAuction[_auctionId].end = true;
         IdToAuction[_auctionId].start = false;
         
-
-
         //--------------------
         // royalty calculation
         //--------------------
@@ -157,22 +155,24 @@ contract AuctionAndBids is ReentrancyGuard {
         NFT nft = getFreeNFT.getNFTDetails(itemId);
         RoyaltyInfo[] royalties = nft.royaltyinfo; 
         for (r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = nft.getRoyaltyRecipient();
-            uint256 royaltyFee = nft.getRoyaltyFee();
+            address royaltyRecipient = royalties[r].receiver;
+            uint256 royaltyFee = royalties[r].royaltyFee;
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
-                // Transfer royalty fee to collection owner
+                // Transfer royalty fee to receivers
                 payToken.transfer(royaltyRecipient, royaltyTotal);
                 totalPrice -= royaltyTotal;
             }
-            // Transfer to auction creator
+
+        }
+
+        // Transfer to auction creator
             IERC20(NFTAddress).transferFrom(
                 msg.sender,
                 IdToAuction[_auctionId].seller,
                 totalPrice - platformFeeTotal
             );
-
-        }
+            
         // Calculate & Transfer platfrom fee
         uint256 platformFeeTotal = calculatePlatformFee(heighestBid);
         IERC20(NFTAddress).transferFrom(

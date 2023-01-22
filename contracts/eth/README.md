@@ -65,10 +65,6 @@ npx hardhat test test/dortzio.ts --network goerli
 
 * Royalty 
 
-# WIPs
-
-* ERC1155 Royalty Batch and Offer
-
 ## References
 
 * https://github.com/nazhG/ERC1155-Marketplace/
