@@ -22,9 +22,6 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
     Counters.Counter private _tokenIdCounter;
     uint256 private royaltyFee;
     address private royaltyRecipient;
-    string private _baseTokenURI;
-    bool public revealed = false;
-
 
     constructor(
         string memory _name,
@@ -32,24 +29,12 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         address _owner,
         uint256 _royaltyFee,
         address _royaltyRecipient
-    ) ERC721(_name, _symbol) {
+    ) ERC721(_name, _symbol){
         require(_royaltyFee <= 10000, "can't more than 10 percent");
         require(_royaltyRecipient != address(0));
         royaltyFee = _royaltyFee;
         royaltyRecipient = _royaltyRecipient;
         transferOwnership(_owner);
-    }
-
-    function _baseURI() internal view virtual override returns (string memory){
-        return _baseTokenURI;
-    }
-
-    function reveal() external onlyOwner {
-        revealed = true;
-    }
-
-    function setBaseURI(string calldata baseURI) external onlyOwner {
-        _baseTokenURI = baseURI;
     }
 
     function safeMint(address to, string memory uri) public onlyOwner {
@@ -65,8 +50,7 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
     }
 
     function batchMint(address to, 
-                      string[] memory tokenUris, 
-                      RoyaltyInfo[] memory royaltyInfo
+                      string[] memory tokenUris
                       ) public onlyOwner{
 
     
@@ -74,7 +58,6 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
             uint256 tokenId = _tokenIdCounter.current();
             _tokenIdCounter.increment();
             _tokenURIs[tokenId] = tokenUris[i];
-            _tokenRoyaltyInfo[tokenId] = royaltyInfo[i];
             _safeMint(to, tokenId);
             _setTokenURI(tokenId, tokenUris[i]);            
         }
@@ -96,21 +79,18 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         override(ERC721, ERC721URIStorage)
         returns (string memory)
     {
-        // return super.tokenURI(tokenId);
-        require(_exists(tokenId), "token with this id doesn't exist");
-        string memory baseURI = _baseURI();
-        string memory metadataPointerId = !revealed ? 'unrevealed' : Strings.toString(tokenId);
-        string memory result = string(abi.encodePacked(baseURI, metadataPointerId, '.json'));
-        return bytes(baseURI).length != 0 ? result : '';
+        return super.tokenURI(tokenId);
     }
 
     function setTokenURIs(string[] memory newtokenUris, uint256[] memory ids)
         public
-        onlyContract
+        onlyOwner
         
     {   
         for (uint256 i = 0; i < ids.length; i++) {
             require(_exists(ids[i]), "token with this id doesn't exist");
+            uint256 tokenId = _tokenIdCounter.current();
+            _tokenIdCounter.increment();
             _tokenURIs[ids[i]] = newtokenUris[ids[i]];
         }
         

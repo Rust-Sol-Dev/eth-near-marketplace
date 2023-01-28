@@ -15,6 +15,15 @@ function toWei(value: number) {
 }
 
 
+// payableToken can be the market ERC20 address or an ERC20 token address
+// other none tested methods:
+//      batchMint
+//      setTokenURIs
+//      withdrawEscrow
+//      depositEscrow
+//      getEscrowAmount
+
+
 describe("Dortzio Marketplace", () => {
 
     let nft: DortzioNFT;

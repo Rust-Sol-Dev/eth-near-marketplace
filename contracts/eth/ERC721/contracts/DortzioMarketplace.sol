@@ -670,6 +670,10 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
 
     }
 
+    function getEscrowAmount() external view returns (uint){
+        return escrowAmount[msg.sender];
+    } 
+
     function withdrawEscrow(
         uint256 _amount
     ) external returns (bool) {
