@@ -20,20 +20,28 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
     using Counters for Counters.Counter;
     mapping (uint256 => string) private _tokenURIs;
     Counters.Counter private _tokenIdCounter;
-    uint256 private royaltyFee;
-    address private royaltyRecipient;
+    RoyaltyInfo[] private royaltyObject;
+
+    struct RoyaltyInfo {
+        address receiver;
+        uint256 royaltyFee;
+    }
 
     constructor(
         string memory _name,
         string memory _symbol,
         address _owner,
-        uint256 _royaltyFee,
-        address _royaltyRecipient
+        RoyaltyInfo[] memory _royaltyInfo
+        // uint256 _royaltyFee,
+        // address _royaltyRecipient
     ) ERC721(_name, _symbol){
-        require(_royaltyFee <= 10000, "can't more than 10 percent");
-        require(_royaltyRecipient != address(0));
-        royaltyFee = _royaltyFee;
-        royaltyRecipient = _royaltyRecipient;
+        for (uint256 i = 0; i < _royaltyInfo.length; i++) {
+            require(_royaltyInfo[i].royaltyFee <= 10000, "can't more than 10 percent");
+            require(_royaltyInfo[i].receiver != address(0));
+        }
+        royaltyObject = _royaltyInfo;
+        // royaltyFee = _royaltyFee;
+        // royaltyRecipient = _royaltyRecipient;
         transferOwnership(_owner);
     }
 
@@ -96,12 +104,16 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         
     }
 
-    function getRoyaltyFee() external view returns (uint256) {
-        return royaltyFee;
-    }
+    // function getRoyaltyFee() external view returns (uint256) {
+    //     return royaltyFee;
+    // }
 
-    function getRoyaltyRecipient() external view returns(address) {
-        return royaltyRecipient;
+    // function getRoyaltyRecipient() external view returns(address) {
+    //     return royaltyRecipient;
+    // }
+
+    function getRoyaltyObject() external view returns (RoyaltyInfo[] memory){
+        return royaltyObject;
     }
 
     function updateRoyaltyFee(uint256 _royaltyFee) external onlyOwner {

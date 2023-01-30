@@ -37,7 +37,7 @@ contract NFT is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
     // ------------- Events -----------
     event FreeNFTMinted(
         uint256 indexed id,
-        address indexed minter,
+        address indexed minter
     );
 
     constructor(

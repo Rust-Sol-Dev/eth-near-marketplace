@@ -1,9 +1,35 @@
 pragma solidity ^0.8.4;
 
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+error NotOwner();
+error PriceMustBeAboveZero();
+
+
+contract PriceOFETHTOUSD{
+
+    uint minimalValue = 50;
+    
+    function PriceFeed() public payable{
+        msg.value > minimalValue;
+    }
+
+    function GetLastestPrice() public view returns (uint){
+        AggregatorV3Interface Price = AggregatorV3Interface(0x8A753747A1Fa494EC906cE90E9f37563A8AF630e);
+        (,int256 price,,,) = Price.latestRoundData();
+        return uint (price * 1e18);
+    }
+
+    function GetValueInDOllar(uint _ethAmount) public view returns(uint){
+        uint ValuePrice = GetLastestPrice();
+        uint AmountinDollars =(ValuePrice * _ethAmount) /1e18;
+        return AmountinDollars;
+    }
+
+}
 
 interface IDortzioNFTFactory {
     function createNFTCollection(
@@ -30,11 +56,16 @@ interface IDortzioNFT {
     
 
 */
-contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
+contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
     IDortzioNFTFactory private immutable dortzioNFTFactory;
 
     uint256 private platformFee;
     address private feeRecipient; // the address of the marketplace account that will receive the fee of the platform
+
+    struct RoyaltyInfo {
+        address receiver;
+        uint256 royaltyFee;
+    }
 
     struct ListNFT {
         address nft;
@@ -188,6 +219,19 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         _;
     }
 
+    modifier isOwner(
+        address _nft,
+        uint256 _tokenId,
+        address spender
+    ) {
+        IERC721 nft = IERC721(_nft);
+        address owner = nft.ownerOf(_tokenId);
+        if (spender != owner) {
+            revert NotOwner();
+        }
+        _;
+    }
+
     modifier isAuction(address _nft, uint256 _tokenId) {
         AuctionNFT memory auction = auctionNfts[_nft][_tokenId];
         require(
@@ -261,6 +305,24 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         delete listNfts[_nft][_tokenId];
     }
 
+    function updateListing(
+        address _nft,
+        uint256 _tokenId,
+        uint256 newPrice
+    )
+        external
+        isListedNFT(_nft, _tokenId)
+        nonReentrant
+        isOwner(_nft, _tokenId, msg.sender)
+    {
+        if (newPrice == 0) {
+            revert PriceMustBeAboveZero();
+        }
+
+        listNfts[_nft][_tokenId].price = newPrice;
+        emit ListedNFT(_nft, _tokenId, _payToken, _price, msg.sender);
+    }
+
     //-----------------------------------------------
     // for buy batch just create a batch tx in front
     //-----------------------------------------------
@@ -283,19 +345,20 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
 
         uint256 totalPrice = _price;
         IDortzioNFT nft = IDortzioNFT(listedNft.nft);
-        address royaltyRecipient = nft.getRoyaltyRecipient();
-        uint256 royaltyFee = nft.getRoyaltyFee();
-
-        if (royaltyFee > 0) {
-            uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
-
-            // Transfer royalty fee to collection owner
-            IERC20(listedNft.payToken).transferFrom(
-                msg.sender,
-                royaltyRecipient,
-                royaltyTotal
-            );
-            totalPrice -= royaltyTotal;
+        RoyaltyInfo[] memory royaltyObject = nft.getRoyaltyObject();
+        for (r = 0; r <= royalties.length; r++){
+            address royaltyRecipient = royaltyObject[r].receiver;
+            uint256 royaltyFee = royaltyObject[r].royaltyFee;
+            if (royaltyFee > 0) {
+                uint256 royaltyTotal = calculateRoyalty(royaltyFee, price);
+                // Transfer royalty fee to receivers
+                IERC20(listedNft.payToken).transferFrom(
+                    msg.sender,
+                    royaltyRecipient,
+                    royaltyTotal
+                );
+                totalPrice -= royaltyTotal;
+            }
         }
 
         // Calculate & Transfer platfrom fee
@@ -417,18 +480,19 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         require(offerPrice <= escrowAmount[offer.offerer], "acceptOffer: lower amount in escrow");
 
         IDortzioNFT nft = IDortzioNFT(offer.nft);
-        address royaltyRecipient = nft.getRoyaltyRecipient();
-        uint256 royaltyFee = nft.getRoyaltyFee();
-
         IERC20 payToken = IERC20(offer.payToken);
-
-        if (royaltyFee > 0) {
-            uint256 royaltyTotal = calculateRoyalty(royaltyFee, offerPrice);
-
-            // Transfer royalty fee to collection owner
-            payToken.transfer(royaltyRecipient, royaltyTotal);
-            totalPrice -= royaltyTotal;
+        RoyaltyInfo[] memory royaltyObject = nft.getRoyaltyObject();
+        for (r = 0; r <= royalties.length; r++){
+            address royaltyRecipient = royaltyObject[r].receiver;
+            uint256 royaltyFee = royaltyObject[r].royaltyFee;
+            if (royaltyFee > 0) {
+                uint256 royaltyTotal = calculateRoyalty(royaltyFee, price);
+                // Transfer royalty fee to receivers
+                payToken.transfer(royaltyRecipient, royaltyTotal);
+                totalPrice -= royaltyTotal;
+            }
         }
+
 
         // Calculate & Transfer platfrom fee
         uint256 platformFeeTotal = calculatePlatformFee(offerPrice);
@@ -577,18 +641,18 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard {
         auction.winner = auction.creator;
 
         IDortzioNFT dortzioNft = IDortzioNFT(_nft);
-        address royaltyRecipient = dortzioNft.getRoyaltyRecipient();
-        uint256 royaltyFee = dortzioNft.getRoyaltyFee();
-
         uint256 heighestBid = auction.heighestBid;
         uint256 totalPrice = heighestBid;
-
-        if (royaltyFee > 0) {
-            uint256 royaltyTotal = calculateRoyalty(royaltyFee, heighestBid);
-
-            // Transfer royalty fee to collection owner
-            payToken.transfer(royaltyRecipient, royaltyTotal);
-            totalPrice -= royaltyTotal;
+        RoyaltyInfo[] memory royaltyObject = nft.getRoyaltyObject();
+        for (r = 0; r <= royalties.length; r++){
+            address royaltyRecipient = royaltyObject[r].receiver;
+            uint256 royaltyFee = royaltyObject[r].royaltyFee;
+            if (royaltyFee > 0) {
+                uint256 royaltyTotal = calculateRoyalty(royaltyFee, heighestBid);
+                // Transfer royalty fee to receivers
+                payToken.transfer(royaltyRecipient, royaltyTotal);
+                totalPrice -= royaltyTotal;
+            }
         }
 
         // Calculate & Transfer platfrom fee

@@ -8,8 +8,12 @@ import "./DortzioNFT.sol";
 contract DortzioNFTFactory {
     // owner address => nft list
     mapping(address => address[]) private nfts;
-
     mapping(address => bool) private dortzioNFT;
+
+    struct RoyaltyInfo {
+        address receiver;
+        uint256 royaltyFee;
+    }
 
     event CreatedNFTCollection(
         address creator,
@@ -21,15 +25,17 @@ contract DortzioNFTFactory {
     function createNFTCollection(
         string memory _name,
         string memory _symbol,
-        uint256 _royaltyFee,
-        address _royaltyRecipient
+        RoyaltyInfo[] memory royaltyInfo
+        // uint256 _royaltyFee,
+        // address _royaltyRecipient
     ) external {
         DortzioNFT nft = new DortzioNFT(
             _name,
             _symbol,
             msg.sender,
-            _royaltyFee,
-            _royaltyRecipient
+            royaltyInfo
+            // _royaltyFee,
+            // _royaltyRecipient
         );
         nfts[msg.sender].push(address(nft));
         dortzioNFT[address(nft)] = true;

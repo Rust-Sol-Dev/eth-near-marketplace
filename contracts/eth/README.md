@@ -65,7 +65,17 @@ npx hardhat test test/dortzio.ts --network goerli
 
 * Royalty 
 
+# WIP
+
+* NFT Copy on ERC721 and ERC1155
+
+* ERC1155 Test Methods
+
 ## References
+
+* https://docs.alchemy.com/docs/how-to-develop-an-nft-smart-contract-erc721-with-alchemy#how-to-format-your-nft-metadata
+
+* https://blog.chain.link/how-to-build-an-nft-marketplace-with-hardhat-and-solidity/
 
 * https://github.com/nazhG/ERC1155-Marketplace/
 

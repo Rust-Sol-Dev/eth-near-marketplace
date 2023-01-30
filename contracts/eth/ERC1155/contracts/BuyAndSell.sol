@@ -7,9 +7,35 @@ import "@openzeppelin/contracts/token/ERC1155/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "./INFT.sol";
+error NotOwner();
+error PriceMustBeAboveZero();
 
 
-contract BuyAndSell is ReentrancyGuard {
+
+contract PriceOFETHTOUSD{
+
+    uint minimalValue = 50;
+    
+    function PriceFeed() public payable{
+        msg.value > minimalValue;
+    }
+
+    function GetLastestPrice() public view returns (uint){
+        AggregatorV3Interface Price = AggregatorV3Interface(0x8A753747A1Fa494EC906cE90E9f37563A8AF630e);
+        (,int256 price,,,) = Price.latestRoundData();
+        return uint (price * 1e18);
+    }
+
+    function GetValueInDOllar(uint _ethAmount) public view returns(uint){
+        uint ValuePrice = GetLastestPrice();
+        uint AmountinDollars =(ValuePrice * _ethAmount) /1e18;
+        return AmountinDollars;
+    }
+
+}
+
+
+contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
     // -----------  VAR --------------
     using Counters for Counters.Counter;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -92,7 +118,7 @@ contract BuyAndSell is ReentrancyGuard {
         address indexed nftOwner
     );
 
-    constructor(address _NFTAddress
+    constructor(address _NFTAddress,
                 uint256 _platformFee,
                 address _feeRecipient) {
         getNFT = INFT(_NFTAddress);
@@ -490,6 +516,41 @@ contract BuyAndSell is ReentrancyGuard {
         );
     }
 
+    modifier isOwner(
+        address _nft,
+        uint256 _tokenId,
+        address spender
+    ) {
+        IERC721 nft = IERC1155(_nft);
+        address owner = nft.ownerOf(_tokenId);
+        if (spender != owner) {
+            revert NotOwner();
+        }
+        _;
+    }
+
+    function updateListing(
+        address _nft,
+        uint256 _tokenId,
+        uint256 newPrice,
+        uint256 _productId
+    )
+        external nonReentrant isOwner(_nft, _tokenId, msg.sender)
+    {
+        if (newPrice == 0) {
+            revert PriceMustBeAboveZero();
+        }
+
+        NFT nft = getNFT.getNFTDetails(_tokenId);
+        PRODUCT memory product = IdToProduct[_productId];
+        require(
+            product.itemId == _tokenId,
+            "nft is not listed"
+        );
+
+        product.price = newPrice;
+        emit NFTIsOnSale(_productId, product.itemId, newPrice, msg.sender);
+    }
 
     function purchaseBatchProduct(uint256[] memory productIds) public payable {
         

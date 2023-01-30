@@ -15,13 +15,17 @@ function toWei(value: number) {
 }
 
 
-// payableToken can be the market ERC20 address or an ERC20 token address
+// NOTE - royalty can be a list of a map with _royaltyFee to _royaltyRecipient 
+// NOTE - payableToken can be the market ERC20 address or an ERC20 token address
 // other none tested methods:
 //      batchMint
 //      setTokenURIs
 //      withdrawEscrow
 //      depositEscrow
 //      getEscrowAmount
+//      GetLastestPrice
+//      GetValueInDOllar
+
 
 
 describe("Dortzio Marketplace", () => {
@@ -67,7 +71,7 @@ describe("Dortzio Marketplace", () => {
         expect(await payableToken.balanceOf(offererAddress)).to.eq(toWei(1000000));
 
         const royaltyRecipient = await creator.getAddress();
-        const tx = await factory.connect(creator).createNFTCollection("Dortzio Collection", "KUIPER", BigNumber.from(10 * 100), royaltyRecipient);
+        const tx = await factory.connect(creator).createNFTCollection("Dortzio Collection", "KUIPER", BigNumber.from(10 * 100), royaltyRecipient); // TODO - must pass a list of royalty objects
         const receipt = await tx.wait();
         const events = receipt.events?.filter((e: any) => e.event == 'CreatedNFTCollection') as any;
         const collectionAddress = events[0].args.nft;
