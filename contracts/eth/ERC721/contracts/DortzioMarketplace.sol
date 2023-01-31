@@ -32,17 +32,20 @@ contract PriceOFETHTOUSD{
 }
 
 interface IDortzioNFTFactory {
+    struct RoyaltyInfo {
+        address receiver;
+        uint256 royaltyFee;
+    }
     function createNFTCollection(
         string memory _name,
         string memory _symbol,
-        uint256 _royaltyFee
+        RoyaltyInfo[] memory royaltyInfo
     ) external;
     function isdortzioNFT(address _nft) external view returns (bool);
 }
 
 interface IDortzioNFT {
-    function getRoyaltyFee() external view returns (uint256);
-    function getRoyaltyRecipient() external view returns (address);
+    function getRoyaltyObject() external view returns (RoyaltyInfo[] memory);
 }
 
 /*  
@@ -106,14 +109,14 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
     mapping(address => bool) private payableToken;
     address[] private tokens;
 
-    // nft => tokenId => list struct
+    // nft => tokenId => list struct 
     mapping(address => mapping(uint256 => ListNFT)) private listNfts;
 
     // nft => tokenId => offerer address => offer struct
     mapping(address => mapping(uint256 => mapping(address => OfferNFT)))
         private offerNfts;
 
-    // nft => tokenId => acuton struct
+    // nft => tokenId => acution struct
     mapping(address => mapping(uint256 => AuctionNFT)) private auctionNfts;
 
     // auciton index => bidding counts => bidder address => bid price
@@ -699,8 +702,34 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         return listNfts[_nft][_tokenId];
     }
 
+    function getListedNFTsOf(address _nft) public view returns (ListNFT[] memory){ // get all listed nfts inside the passed in nft contract
+        IDortzioNFT nft = IDortzioNFT(_nft);
+        ListNFT[] memory listed_nfts;
+        uint256 pagination = 0; 
+        uint256 total_nft_ids = nft.totalNFTsMinted();
+        for (tokenId = total_nft_ids; tokenId >= 0; tokenId--){
+            ListNFT storage list = listNfts[_nft][tokenId];
+            listed_nfts[tokenId] = list;
+        }
+        return listed_nfts;
+    }
+
+    function getListedNFTsOfOwner(address _nft) public view returns (ListNFT[] memory){ // get all listed nfts inside the passed in nft contract
+        IDortzioNFT nft = IDortzioNFT(_nft);
+        IERC721 nft = IERC721(_nft);
+        ListNFT[] memory listed_nfts;
+        uint256 pagination = 0; 
+        uint256 total_nft_ids = nft.totalNFTsMinted();
+        for (tokenId = total_nft_ids; tokenId >= 0; tokenId--){
+            require(nft.ownerOf(tokenId) == msg.sender, "not nft owner");
+            ListNFT storage list = listNfts[_nft][tokenId];
+            listed_nfts[tokenId] = list;
+        }
+        return listed_nfts;
+    }
+
     function getPayableTokens() external view returns (address[] memory) {
-        return tokens;
+        return tokens;  
     }
 
     function checkIsPayableToken(address _payableToken)

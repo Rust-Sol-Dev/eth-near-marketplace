@@ -116,8 +116,11 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         return royaltyObject;
     }
 
-    function updateRoyaltyFee(uint256 _royaltyFee) external onlyOwner {
-        require(_royaltyFee <= 10000, "can't more than 10 percent");
-        royaltyFee = _royaltyFee;
+    function updateRoyaltyObject(RoyaltyInfo[] memory _royaltyInfo) external onlyOwner {
+        for (uint256 i = 0; i < _royaltyInfo.length; i++) {
+            require(_royaltyInfo[i].royaltyFee <= 10000, "can't more than 10 percent");
+            require(_royaltyInfo[i].receiver != address(0));
+        }
+        royaltyObject = _royaltyInfo;
     }
 }

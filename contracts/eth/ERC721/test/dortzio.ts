@@ -25,7 +25,8 @@ function toWei(value: number) {
 //      getEscrowAmount
 //      GetLastestPrice
 //      GetValueInDOllar
-
+//      getListedNFTsOf
+//      getListedNFTsOfOwner
 
 
 describe("Dortzio Marketplace", () => {

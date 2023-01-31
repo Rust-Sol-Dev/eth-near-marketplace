@@ -67,9 +67,9 @@ npx hardhat test test/dortzio.ts --network goerli
 
 # WIP
 
-* NFT Copy on ERC721 and ERC1155
+* NFT Copy on ERC721 and ERC1155 Contracts
 
-* ERC1155 Test Methods
+* ERC1155 Methods Test
 
 ## References
 
