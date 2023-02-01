@@ -27,7 +27,7 @@ function toWei(value: number) {
 //      GetValueInDOllar
 //      getListedNFTsOf
 //      getListedNFTsOfOwner
-
+//      getRoyaltyObjectOfNFT
 
 describe("Dortzio Marketplace", () => {
 
@@ -49,7 +49,7 @@ describe("Dortzio Marketplace", () => {
         expect(factory.address).not.eq(null, "Deploy factory is failed.");
 
         const Marketplace = new DortzioNFTMarketplace__factory(owner);
-        const platformFee = BigNumber.from(10); // 10%
+        const platformFee = BigNumber.from(10); // 10% - TODO later read from env
         const feeRecipient = await owner.getAddress();
         marketplace = await Marketplace.deploy(platformFee, feeRecipient, factory.address);
         await marketplace.deployed();

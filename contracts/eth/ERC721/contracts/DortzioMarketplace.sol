@@ -32,20 +32,18 @@ contract PriceOFETHTOUSD{
 }
 
 interface IDortzioNFTFactory {
-    struct RoyaltyInfo {
-        address receiver;
-        uint256 royaltyFee;
-    }
     function createNFTCollection(
         string memory _name,
-        string memory _symbol,
-        RoyaltyInfo[] memory royaltyInfo
+        string memory _symbol
     ) external;
     function isdortzioNFT(address _nft) external view returns (bool);
 }
 
 interface IDortzioNFT {
-    function getRoyaltyObject() external view returns (RoyaltyInfo[] memory);
+    function getRoyaltiesCountOfNFT(uint256 _tokenId) external view returns (uint);
+    function getRoyaltyReceiverOfNFT(uint256 _tokenId, uint index) external view returns (address);
+    function getRoyaltyFeeOfNFT(uint256 _tokenId, uint index) external view returns (uint256);
+    function totalNFTsMinted() external view returns (uint256);
 }
 
 /*  
@@ -64,11 +62,6 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
 
     uint256 private platformFee;
     address private feeRecipient; // the address of the marketplace account that will receive the fee of the platform
-
-    struct RoyaltyInfo {
-        address receiver;
-        uint256 royaltyFee;
-    }
 
     struct ListNFT {
         address nft;
@@ -323,7 +316,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         }
 
         listNfts[_nft][_tokenId].price = newPrice;
-        emit ListedNFT(_nft, _tokenId, _payToken, _price, msg.sender);
+        emit ListedNFT(_nft, _tokenId, listNfts[_nft][_tokenId].payToken, newPrice, msg.sender);
     }
 
     //-----------------------------------------------
@@ -347,13 +340,13 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         listedNft.sold = true;
 
         uint256 totalPrice = _price;
-        IDortzioNFT nft = IDortzioNFT(listedNft.nft);
-        RoyaltyInfo[] memory royaltyObject = nft.getRoyaltyObject();
-        for (r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royaltyObject[r].receiver;
-            uint256 royaltyFee = royaltyObject[r].royaltyFee;
+        IDortzioNFT dortzioNft = IDortzioNFT(listedNft.nft);
+        uint royalty_count = dortzioNft.getRoyaltiesCountOfNFT(_tokenId);
+        for (uint r = 0; r <= royalty_count; r++){
+            address royaltyRecipient = dortzioNft.getRoyaltyReceiverOfNFT(_tokenId, r);
+            uint256 royaltyFee = dortzioNft.getRoyaltyFeeOfNFT(_tokenId, r);
             if (royaltyFee > 0) {
-                uint256 royaltyTotal = calculateRoyalty(royaltyFee, price);
+                uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
                 // Transfer royalty fee to receivers
                 IERC20(listedNft.payToken).transferFrom(
                     msg.sender,
@@ -482,14 +475,14 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
 
         require(offerPrice <= escrowAmount[offer.offerer], "acceptOffer: lower amount in escrow");
 
-        IDortzioNFT nft = IDortzioNFT(offer.nft);
+        IDortzioNFT dortzioNft = IDortzioNFT(offer.nft);
         IERC20 payToken = IERC20(offer.payToken);
-        RoyaltyInfo[] memory royaltyObject = nft.getRoyaltyObject();
-        for (r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royaltyObject[r].receiver;
-            uint256 royaltyFee = royaltyObject[r].royaltyFee;
+        uint royalty_count = dortzioNft.getRoyaltiesCountOfNFT(_tokenId);
+        for (uint r = 0; r <= royalty_count; r++){
+            address royaltyRecipient = dortzioNft.getRoyaltyReceiverOfNFT(_tokenId, r);
+            uint256 royaltyFee = dortzioNft.getRoyaltyFeeOfNFT(_tokenId, r);
             if (royaltyFee > 0) {
-                uint256 royaltyTotal = calculateRoyalty(royaltyFee, price);
+                uint256 royaltyTotal = calculateRoyalty(royaltyFee, offerPrice);
                 // Transfer royalty fee to receivers
                 payToken.transfer(royaltyRecipient, royaltyTotal);
                 totalPrice -= royaltyTotal;
@@ -646,10 +639,10 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         IDortzioNFT dortzioNft = IDortzioNFT(_nft);
         uint256 heighestBid = auction.heighestBid;
         uint256 totalPrice = heighestBid;
-        RoyaltyInfo[] memory royaltyObject = nft.getRoyaltyObject();
-        for (r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royaltyObject[r].receiver;
-            uint256 royaltyFee = royaltyObject[r].royaltyFee;
+        uint royalty_count = dortzioNft.getRoyaltiesCountOfNFT(_tokenId);
+        for (uint r = 0; r <= royalty_count; r++){
+            address royaltyRecipient = dortzioNft.getRoyaltyReceiverOfNFT(_tokenId, r);
+            uint256 royaltyFee = dortzioNft.getRoyaltyFeeOfNFT(_tokenId, r);
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, heighestBid);
                 // Transfer royalty fee to receivers
@@ -707,7 +700,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         ListNFT[] memory listed_nfts;
         uint256 pagination = 0; 
         uint256 total_nft_ids = nft.totalNFTsMinted();
-        for (tokenId = total_nft_ids; tokenId >= 0; tokenId--){
+        for (uint256 tokenId = total_nft_ids; tokenId >= 0; tokenId--){
             ListNFT storage list = listNfts[_nft][tokenId];
             listed_nfts[tokenId] = list;
         }
@@ -715,12 +708,12 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
     }
 
     function getListedNFTsOfOwner(address _nft) public view returns (ListNFT[] memory){ // get all listed nfts inside the passed in nft contract
-        IDortzioNFT nft = IDortzioNFT(_nft);
+        IDortzioNFT nftObj = IDortzioNFT(_nft);
         IERC721 nft = IERC721(_nft);
         ListNFT[] memory listed_nfts;
         uint256 pagination = 0; 
-        uint256 total_nft_ids = nft.totalNFTsMinted();
-        for (tokenId = total_nft_ids; tokenId >= 0; tokenId--){
+        uint256 total_nft_ids = nftObj.totalNFTsMinted();
+        for (uint256 tokenId = total_nft_ids; tokenId >= 0; tokenId--){
             require(nft.ownerOf(tokenId) == msg.sender, "not nft owner");
             ListNFT storage list = listNfts[_nft][tokenId];
             listed_nfts[tokenId] = list;

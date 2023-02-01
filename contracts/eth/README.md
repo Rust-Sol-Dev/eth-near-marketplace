@@ -2,8 +2,6 @@
 
 ## Notes
 
-* contract owner is the collection creator in ERC721
-
 * change the `--network` parameter to `mainnet` for production.
 
 * remember to fill the `.env` file with appropriate parameters.
@@ -70,6 +68,10 @@ npx hardhat test test/dortzio.ts --network goerli
 * NFT Copy on ERC721 and ERC1155 Contracts
 
 * ERC1155 Methods Test
+
+* Can't Return Struct from function (fix royalty bug) 
+
+* Deploy ERC1155
 
 ## References
 
