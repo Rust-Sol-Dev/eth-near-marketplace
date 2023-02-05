@@ -65,11 +65,7 @@ npx hardhat test test/dortzio.ts --network goerli
 
 # WIP
 
-* NFT Copy on ERC721 and ERC1155 Contracts
-
-* ERC1155 Methods Test
-
-* Can't Return Struct from function (fix royalty bug) 
+* NFT Copy
 
 * Deploy ERC1155
 
@@ -90,8 +86,6 @@ npx hardhat test test/dortzio.ts --network goerli
 * https://coinsbench.com/fully-decentralized-erc-721-and-erc-1155-nfts-6c229adf9c9b
 
 * https://medium.com/coinmonks/how-to-make-your-nfts-reveal-in-solidity-d231ec8413c6
-
-* https://coinsbench.com/fully-decentralized-erc-721-and-erc-1155-nfts-6c229adf9c9b
 
 * https://github.com/kofkuiper/kuiper-nft-marketplace
 
