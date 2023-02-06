@@ -16,22 +16,14 @@ contract NFT is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
     address public buyAndSellAddress;
     address public auctionAddress;
     mapping(uint256 => NFT) private IdToNFT;
-    mapping(uint256 => RoyaltyInfo[]) private _tokenRoyaltyInfo; // NFT id => royalty
     mapping (uint256 => string) private _tokenURIs;
     mapping(uint256 => uint256) public tokensHeldBalances; // id => balance (amount held not for sale)
 
-
-
-    struct RoyaltyInfo {
-        address receiver;
-        uint256 royaltyFee;
-    }
     
     struct NFT {
         uint256 id;
         address owner;
         bool onSell;
-        RoyaltyInfo[] royaltyinfo;
     }
 
     // ------------- Events -----------
@@ -82,15 +74,6 @@ contract NFT is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
     }
     
 
-    function getNFTRoyaltyInfo(uint256 tokenId) 
-    public
-        view
-        returns (RoyaltyInfo[] memory)
-        {
-            RoyaltyInfo memory ri = _tokenRoyaltyInfo[tokenId];
-            return ri;
-        }
-
     function MintNFT() external {
         itemId.increment();
         uint256 currentId = itemId.current();
@@ -106,7 +89,6 @@ contract NFT is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
         address to,
         string[] memory tokenUris, 
         uint256[] memory ids,
-        RoyaltyInfo[] memory royaltyInfo,
         uint256[] memory amounts
     ) external onlyOwner {
         require(tokenUris.length == amounts.length , "Ids and TokenUri length mismatch");
@@ -124,7 +106,6 @@ contract NFT is ERC1155, ERC1155Holder, Ownable, ERC1155URIStorage {
                 IdToNFT[currentId].royaltyinfo = royaltyInfo;
                 _tokenURIs[currentId] = tokenUris[i];
                 tokensHeldBalances[currentId] += amounts[i];
-                _tokenRoyaltyInfo[currentId] = royaltyInfo[i];
                 emit FreeNFTMinted(currentId, msg.sender);
             }
         }

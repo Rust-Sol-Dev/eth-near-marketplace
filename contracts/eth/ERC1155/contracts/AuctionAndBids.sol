@@ -132,7 +132,7 @@ contract AuctionAndBids is ReentrancyGuard {
     }
 
     // end the auction everyone can call this function require timeend
-    function endAuction(uint256 _auctionId) external nonReentrant {
+    function endAuction(uint256 _auctionId, address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts) external nonReentrant {
         uint256 endTime = IdToAuction[_auctionId].endAt;
         bool isStarted = IdToAuction[_auctionId].start;
         bool isEnded = IdToAuction[_auctionId].end;
@@ -152,11 +152,11 @@ contract AuctionAndBids is ReentrancyGuard {
         IERC20 payToken = IERC20(NFTAddress);
         uint256 heighestBid = IdToAuction[_auctionId];
         uint256 totalPrice = IdToAuction[_auctionId].highestBid;
-        NFT nft = getFreeNFT.getNFTDetails(itemId);
-        RoyaltyInfo[] royalties = nft.royaltyinfo; 
-        for (r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royalties[r].receiver;
-            uint256 royaltyFee = royalties[r].royaltyFee;
+        // NFT nft = getFreeNFT.getNFTDetails(itemId);
+        uint royalties = _Royaltyrecipients.length;
+        for (uint r = 0; r <= royalties; r++){
+            address royaltyRecipient = _Royaltyrecipients[r];
+            uint256 royaltyFee = _Royaltyamounts[r];
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
                 // Transfer royalty fee to receivers

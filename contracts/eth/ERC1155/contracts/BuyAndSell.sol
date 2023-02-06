@@ -203,7 +203,8 @@ contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
     // listed NFT owner accept offerring
     function acceptOfferNFT(
         uint256 _tokenId,
-        address _offerer
+        address _offerer,
+        address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts
     ) external
     {
         
@@ -241,10 +242,10 @@ contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
 
         IERC20 payToken = IERC20(NFTAddress);
         NFT nft = getFreeNFT.getNFTDetails(itemId);
-        RoyaltyInfo[] royalties = nft.royaltyinfo; 
-        for (r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royalties[r].receiver;
-            uint256 royaltyFee = royalties[r].royaltyFee;
+        uint royalties = _Royaltyrecipients.length;
+        for (uint r = 0; r <= royalties; r++){
+            address royaltyRecipient = _Royaltyrecipients[r];
+            uint256 royaltyFee = _Royaltyamounts[r];
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
                 // Transfer royalty fee to collection owner
@@ -324,7 +325,7 @@ contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
     // ------------ Normal Buy Method -----------
     // require msg.value => price
     // product still availaibe
-    function purchaseProduct(uint256 _productId) external payable nonReentrant {
+    function purchaseProduct(uint256 _productId, address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts) external payable nonReentrant {
         uint256 price = IdToProduct[_productId].price;
         bool isSold = IdToProduct[_productId].isSold;
         require(msg.value >= price, "amount < price");
@@ -349,11 +350,11 @@ contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
         // royalty calculation
         //--------------------
         uint256 totalPrice = price;
-        NFT nft = getNFT.getNFTDetails(itemId);
-        RoyaltyInfo[] royalties = nft.royaltyinfo; 
-        for (r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royalties[r].receiver;
-            uint256 royaltyFee = royalties[r].royaltyFee;
+        uint royalties = _Royaltyrecipients.length;
+        // NFT nft = getNFT.getNFTDetails(itemId);
+        for (r = 0; r <= royalties; r++){
+            address royaltyRecipient = _Royaltyrecipients[r];
+            uint256 royaltyFee = _Royaltyamounts[r];
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, price);
                 // Transfer royalty fee to receivers
@@ -552,7 +553,7 @@ contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
         emit NFTIsOnSale(_productId, product.itemId, newPrice, msg.sender);
     }
 
-    function purchaseBatchProduct(uint256[] memory productIds) public payable {
+    function purchaseBatchProduct(uint256[] memory productIds, address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts) public payable {
         
         for (p = 0; p <= productIds.length; p++){
             uint256 price = IdToProduct[_productId[p]].price;
@@ -579,11 +580,11 @@ contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
             // royalty calculation
             //--------------------
             uint256 totalPrice = price;
-            NFT nft = getNFT.getNFTDetails(itemId);
-            RoyaltyInfo[] royalties = nft.royaltyinfo; 
-            for (r = 0; r <= royalties.length; r++){
-                address royaltyRecipient = royalties[r].receiver;
-                uint256 royaltyFee = royalties[r].royaltyFee;
+            uint royalties = _Royaltyrecipients.length;
+            // NFT nft = getNFT.getNFTDetails(itemId);
+            for (r = 0; r <= royalties; r++){
+                address royaltyRecipient = _Royaltyrecipients[r];
+                uint256 royaltyFee = _Royaltyamounts[r];
                 if (royaltyFee > 0) {
                     uint256 royaltyTotal = calculateRoyalty(royaltyFee, price);
                     // Transfer royalty fee to receivers
