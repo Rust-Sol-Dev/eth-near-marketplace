@@ -15,7 +15,7 @@ function toWei(value: number) {
 }
 
 
-// NOTE - royalty can be a list of a map with _royaltyFee to _royaltyRecipient 
+
 // NOTE - payableToken can be the market ERC20 address or an ERC20 token address
 // other none tested methods:
 //      batchMint
@@ -27,7 +27,6 @@ function toWei(value: number) {
 //      GetValueInDOllar
 //      getListedNFTsOf
 //      getListedNFTsOfOwner
-//      getRoyaltyObjectOfNFT
 
 describe("Dortzio Marketplace", () => {
 
@@ -71,8 +70,8 @@ describe("Dortzio Marketplace", () => {
         await payableToken.connect(owner).transfer(offererAddress, toWei(1000000));
         expect(await payableToken.balanceOf(offererAddress)).to.eq(toWei(1000000));
 
-        const royaltyRecipient = await creator.getAddress();
-        const tx = await factory.connect(creator).createNFTCollection("Dortzio Collection", "KUIPER", BigNumber.from(10 * 100), royaltyRecipient); // TODO - must pass a list of royalty objects
+        
+        const tx = await factory.connect(creator).createNFTCollection("Dortzio Collection", "KUIPER");
         const receipt = await tx.wait();
         const events = receipt.events?.filter((e: any) => e.event == 'CreatedNFTCollection') as any;
         const collectionAddress = events[0].args.nft;
@@ -120,10 +119,11 @@ describe("Dortzio Marketplace", () => {
         })
 
         it("Buyer should buy listed NFT", async () => {
+            const royaltyRecipient = await creator.getAddress();
             const tokenId = 0;
             const buyPrice = 100001;
             await payableToken.connect(buyer).approve(marketplace.address, toWei(buyPrice));
-            await marketplace.connect(buyer).buyNFT(nft.address, tokenId, payableToken.address, toWei(buyPrice));
+            await marketplace.connect(buyer).buyNFT(nft.address, tokenId, payableToken.address, toWei(buyPrice), [royaltyRecipient], [BigNumber.from(10 * 100)]);
             expect(await nft.ownerOf(tokenId)).eq(await buyer.getAddress(), "Buy NFT is failed.");
         })
     })
@@ -191,7 +191,8 @@ describe("Dortzio Marketplace", () => {
         })
 
         it("Creator should accept offer", async () => {
-            await marketplace.connect(creator).acceptOfferNFT(nft.address, tokenId, await offerer.getAddress());
+            const royaltyRecipient = await creator.getAddress();
+            await marketplace.connect(creator).acceptOfferNFT(nft.address, tokenId, await offerer.getAddress(), [royaltyRecipient], [BigNumber.from(10 * 100)]);
             expect(await nft.ownerOf(tokenId)).eq(await offerer.getAddress());
         })
     })
@@ -274,7 +275,8 @@ describe("Dortzio Marketplace", () => {
 
         it("Marketplace owner should call result auction", async () => {
             try {
-                const tx = await marketplace.connect(owner).resultAuction(nft.address, tokenId);
+                const royaltyRecipient = await creator.getAddress();
+                const tx = await marketplace.connect(owner).resultAuction(nft.address, tokenId, [royaltyRecipient], [BigNumber.from(10 * 100)]);
                 const receipt = await tx.wait();
                 const events = receipt.events?.filter((e: any) => e.event == 'ResultedAuction') as any;
                 const eventNFT = events[0].args.nft;

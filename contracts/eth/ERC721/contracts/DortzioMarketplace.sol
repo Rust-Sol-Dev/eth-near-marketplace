@@ -40,9 +40,6 @@ interface IDortzioNFTFactory {
 }
 
 interface IDortzioNFT {
-    function getRoyaltiesCountOfNFT(uint256 _tokenId) external view returns (uint);
-    function getRoyaltyReceiverOfNFT(uint256 _tokenId, uint index) external view returns (address);
-    function getRoyaltyFeeOfNFT(uint256 _tokenId, uint index) external view returns (uint256);
     function totalNFTsMinted() external view returns (uint256);
 }
 
@@ -62,13 +59,6 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
 
     uint256 private platformFee;
     address private feeRecipient; // the address of the marketplace account that will receive the fee of the platform
-
-
-    struct RoyaltyInfo {
-        address receiver;
-        uint256 royaltyFee;
-    }
-
 
     struct ListNFT {
         address nft;
@@ -112,9 +102,6 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
     // nft => tokenId => list struct 
     mapping(address => mapping(uint256 => ListNFT)) private listNfts;
 
-    // nft => tokenId => royalty struct 
-    mapping(address => mapping(uint256 => RoyaltyInfo[])) private NftRoyatlies;
-
     // nft => tokenId => offerer address => offer struct
     mapping(address => mapping(uint256 => mapping(address => OfferNFT)))
         private offerNfts;
@@ -133,12 +120,6 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         address payToken,
         uint256 price,
         address indexed seller
-    );
-
-    event NFTRoyalty(
-        address indexed nft,
-        uint256 indexed tokenId,
-        RoyaltyInfo[] royalties
     );
 
     event BoughtNFT(
@@ -220,15 +201,6 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
             listedNFT.seller != address(0) && !listedNFT.sold,
             "not listed"
         );
-        _;
-    }
-
-    modifier HasNFTRoyalty(address _nft, uint256 _tokenId){
-        RoyaltyInfo[] memory royalties = NftRoyatlies[_nft][_tokenId];
-        for (uint256 i = 0; i < royalties.length; i++) {
-            require(royalties[i].royaltyFee <= 10000, "can't more than 10 percent");
-            require(royalties[i].receiver != address(0));
-        }
         _;
     }
 
@@ -327,23 +299,6 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         delete listNfts[_nft][_tokenId];
     }
 
-    function addRoyalty(address _nft, uint256 _tokenId, RoyaltyInfo[] memory royalties ) 
-        external
-        isListedNFT(_nft, _tokenId)
-        nonReentrant
-        isOwner(_nft, _tokenId, msg.sender) {
-            RoyaltyInfo[] memory ri = new RoyaltyInfo[](royalties.length);
-            for (uint i = 0; i < royalties.length; i++){
-                require(royalties[i].royaltyFee <= 10000, "can't more than 10 percent");
-                require(royalties[i].receiver != address(0));
-                ri[i].royaltyFee = royalties[i].royaltyFee;
-                ri[i].receiver = royalties[i].receiver;
-            }
-                NftRoyatlies[_nft][_tokenId] = ri;
-
-            emit NFTRoyalty(_nft, _tokenId, ri);
-        }
-
     function updateListing(
         address _nft,
         uint256 _tokenId,
@@ -371,8 +326,9 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         address _nft,
         uint256 _tokenId,
         address _payToken,
-        uint256 _price
-    ) external isListedNFT(_nft, _tokenId) HasNFTRoyalty(_nft, _tokenId){
+        uint256 _price,
+        address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts
+    ) external isListedNFT(_nft, _tokenId){
         ListNFT storage listedNft = listNfts[_nft][_tokenId];
         require(
             _payToken != address(0) && _payToken == listedNft.payToken,
@@ -382,13 +338,13 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         require(_price >= listedNft.price, "invalid price");
 
         listedNft.sold = true;
-
         uint256 totalPrice = _price;
         IDortzioNFT dortzioNft = IDortzioNFT(listedNft.nft);
-        RoyaltyInfo[] memory royalties = NftRoyatlies[_nft][_tokenId];
-        for (uint r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royalties[r].receiver;
-            uint256 royaltyFee = royalties[r].royaltyFee;
+        
+        uint royalties = _Royaltyrecipients.length;
+        for (uint r = 0; r <= royalties; r++){
+            address royaltyRecipient = _Royaltyrecipients[r];
+            uint256 royaltyFee = _Royaltyamounts[r];
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, _price);
                 // Transfer royalty fee to receivers
@@ -492,21 +448,17 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         );
     }
 
-    function getNftRoyalty(address _nft, uint256 _tokenId) private returns (RoyaltyInfo[] memory){
-        RoyaltyInfo[] memory royalties = NftRoyatlies[_nft][_tokenId];
-        return royalties;
-    }
 
     // listed NFT owner accept offerring
     function acceptOfferNFT(
         address _nft,
         uint256 _tokenId,
-        address _offerer
+        address _offerer,
+        address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts
     )
         external
         isOfferredNFT(_nft, _tokenId, _offerer)
-        isListedNFT(_nft, _tokenId)
-        HasNFTRoyalty(_nft, _tokenId)
+        
     {
         require(
             listNfts[_nft][_tokenId].seller == msg.sender,
@@ -514,7 +466,6 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         );
         OfferNFT storage offer = offerNfts[_nft][_tokenId][_offerer];
         ListNFT storage list = listNfts[offer.nft][offer.tokenId];
-        RoyaltyInfo[] memory royalties = getNftRoyalty(_nft, _tokenId);
         require(!list.sold, "already sold");
         require(!offer.accepted, "offer already accepted");
 
@@ -528,9 +479,10 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
 
         IDortzioNFT dortzioNft = IDortzioNFT(offer.nft);
         IERC20 payToken = IERC20(offer.payToken);
-        for (uint r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royalties[r].receiver;
-            uint256 royaltyFee = royalties[r].royaltyFee;
+        uint royalties = _Royaltyrecipients.length;
+        for (uint r = 0; r <= royalties; r++){
+            address royaltyRecipient = _Royaltyrecipients[r];
+            uint256 royaltyFee = _Royaltyamounts[r];
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, offerPrice);
                 // Transfer royalty fee to receivers
@@ -666,7 +618,7 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
     }
 
     // Result auction, can call by auction creator, heighest bidder, or marketplace owner only!
-    function resultAuction(address _nft, uint256 _tokenId) external {
+    function resultAuction(address _nft, uint256 _tokenId, address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts) external {
         require(!auctionNfts[_nft][_tokenId].success, "already resulted");
         require(
             msg.sender == owner() ||
@@ -689,10 +641,11 @@ contract dortzioNFTMarketplace is Ownable, ReentrancyGuard, PriceOFETHTOUSD {
         IDortzioNFT dortzioNft = IDortzioNFT(_nft);
         uint256 heighestBid = auction.heighestBid;
         uint256 totalPrice = heighestBid;
-        RoyaltyInfo[] memory royalties = NftRoyatlies[_nft][_tokenId];
-        for (uint r = 0; r <= royalties.length; r++){
-            address royaltyRecipient = royalties[r].receiver;
-            uint256 royaltyFee = royalties[r].royaltyFee;
+
+        uint royalties = _Royaltyrecipients.length;
+        for (uint r = 0; r <= royalties; r++){
+            address royaltyRecipient = _Royaltyrecipients[r];
+            uint256 royaltyFee = _Royaltyamounts[r];
             if (royaltyFee > 0) {
                 uint256 royaltyTotal = calculateRoyalty(royaltyFee, heighestBid);
                 // Transfer royalty fee to receivers

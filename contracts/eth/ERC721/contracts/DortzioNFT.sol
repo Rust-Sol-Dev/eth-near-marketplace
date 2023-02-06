@@ -18,12 +18,6 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
     using Counters for Counters.Counter;
     mapping (uint256 => string) private _tokenURIs;
     Counters.Counter private _tokenIdCounter;
-    mapping (uint256 => RoyaltyInfo[]) private _royaltyObject;
-
-    struct RoyaltyInfo {
-        address receiver;
-        uint256 royaltyFee;
-    }
 
     constructor(
         string memory _name,
@@ -33,15 +27,10 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         transferOwnership(_owner);
     }
 
-    function safeMint(address to, string memory uri, RoyaltyInfo[] memory _royaltyInfo) public onlyOwner {
-        for (uint256 i = 0; i < _royaltyInfo.length; i++) {
-            require(_royaltyInfo[i].royaltyFee <= 10000, "can't more than 10 percent");
-            require(_royaltyInfo[i].receiver != address(0));
-        }
+    function safeMint(address to, string memory uri) public onlyOwner {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _tokenURIs[tokenId] = uri;
-        _royaltyObject[tokenId] = _royaltyInfo;
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
     }
@@ -97,25 +86,4 @@ contract DortzioNFT is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
         
     }
     
-    function getRoyaltiesCountOfNFT(uint256 _tokenId) external view returns (uint){
-        return _royaltyObject[_tokenId].length;
-    }
-
-    function getRoyaltyReceiverOfNFT(uint256 _tokenId, uint index) external view returns (address){
-        RoyaltyInfo memory ri = _royaltyObject[_tokenId][index];
-        return ri.receiver;
-    }
-
-    function getRoyaltyFeeOfNFT(uint256 _tokenId, uint index) external view returns (uint256){
-        RoyaltyInfo memory ri = _royaltyObject[_tokenId][index];
-        return ri.royaltyFee;
-    }
-
-    function updateRoyaltyObject(uint256 _tokenId, RoyaltyInfo[] memory _royaltyInfo) external onlyOwner {
-        for (uint256 i = 0; i < _royaltyInfo.length; i++) {
-            require(_royaltyInfo[i].royaltyFee <= 10000, "can't more than 10 percent");
-            require(_royaltyInfo[i].receiver != address(0));
-        }
-       _royaltyObject[_tokenId] = _royaltyInfo;
-    }
 }
