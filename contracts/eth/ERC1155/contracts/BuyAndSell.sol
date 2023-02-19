@@ -55,11 +55,6 @@ contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
         private offerNfts;
 
 
-    struct RoyaltyInfo {
-        address receiver;
-        uint256 royaltyFee;
-    }
-
     struct OfferNFT {
         uint256 tokenId;
         address offerer;
@@ -71,7 +66,6 @@ contract BuyAndSell is ReentrancyGuard, PriceOFETHTOUSD {
         uint256 id;
         address owner;
         bool onSell;
-        RoyaltyInfo[] royaltyinfo;
     }
 
     struct PRODUCT {
