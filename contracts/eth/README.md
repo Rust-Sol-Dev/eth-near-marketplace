@@ -63,12 +63,6 @@ npx hardhat test test/dortzio.ts --network goerli
 
 * Royalty 
 
-# WIP
-
-* NFT Copy
-
-* Deploy ERC1155
-
 ## References
 
 * https://docs.alchemy.com/docs/how-to-develop-an-nft-smart-contract-erc721-with-alchemy#how-to-format-your-nft-metadata
