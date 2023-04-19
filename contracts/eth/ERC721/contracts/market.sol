@@ -41,10 +41,16 @@ contract NFTMarketplace is ERC721, Ownable, ERC721URIStorage  {
         uint256 price;
     }
 
+    struct OwnerCopies{
+        address owner;
+        uint256 copies;
+    }
+
     mapping(uint256 => Offer) public tokenIdToOffer;
     mapping(uint256 => Auction) public tokenIdToAuction;
     mapping(address => uint256) public pendingWithdrawals;  
     mapping(uint256 => OfferRequest) public tokenIdToOfferRequest;
+    mapping(uint256 => OwnerCopies) public tokenOwnerCopies;
     mapping(uint256 => UserOffer[]) public userOffers;
 
     event MarketFeePercentageChanged(uint256 newMarketFeePercentage);
@@ -76,11 +82,15 @@ contract NFTMarketplace is ERC721, Ownable, ERC721URIStorage  {
         emit MarketFeePercentageChanged(newMarketFeePercentage);
     }
 
-    function mintNFT(address recipient, string memory tokenURI) public onlyOwner returns (uint256){
-        _tokenIds.increment();
-        uint256 tokenId = _tokenIds.current();
+    function mintNFT(address recipient, string memory tokenURI, uint256 tokenId, uint256 copies) public returns (uint256){
+        // _tokenIds.increment();
+        // uint256 tokenId = _tokenIds.current();
         _mint(recipient, tokenId);
         _setTokenURI(tokenId, tokenURI);
+        tokenOwnerCopies[tokenId] = OwnerCopies({
+            owner: recipient,
+            copies: copies
+        });
         emit TokenMinted(tokenId, recipient);
         return tokenId;
     }
@@ -168,14 +178,14 @@ contract NFTMarketplace is ERC721, Ownable, ERC721URIStorage  {
     }
     function depositForOffer(uint256 tokenId) public payable {
         Offer storage offer = tokenIdToOffer[tokenId];
-        require(offer.isForSale, "Token not for sale");
+        // require(offer.isForSale, "Token not for sale");
         require(msg.value >= offer.askingPrice, "Insufficient funds");
         pendingWithdrawals[_msgSender()] += msg.value;
     }
-    function buyNFT(uint256 tokenId, address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts) public payable {
+    function buyNFT(uint256 tokenId, address[] memory _Royaltyrecipients, uint256[] memory _Royaltyamounts, uint256 quantity) public payable {
         Offer memory offer = tokenIdToOffer[tokenId];
         require(offer.isForSale, "Token not for sale");
-        require(msg.value >= offer.askingPrice, "Insufficient funds");
+        require(msg.value >= offer.askingPrice * quantity, "Insufficient funds");
 
         uint256 total_royalties;
         uint royalties = _Royaltyrecipients.length;
@@ -203,6 +213,18 @@ contract NFTMarketplace is ERC721, Ownable, ERC721URIStorage  {
     
          tokenIdToAuction[tokenId] = Auction(true, tokenId, address(0), 0, endTime);
         emit AuctionCreated(tokenId, endTime);
+    }
+    function cancelAuction(uint256 tokenId) public {
+        Auction storage auction = tokenIdToAuction[tokenId];
+        require(auction.isActive, "Auction not active");
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "Not approved or owner");
+
+        if (auction.highestBidder != address(0)) {
+            pendingWithdrawals[auction.highestBidder] += auction.highestBid;
+        }
+
+        auction.isActive = false;
+        emit AuctionEnded(tokenId, address(0), 0);
     }
 
     function placeBid(uint256 tokenId) public payable {
@@ -267,7 +289,61 @@ contract NFTMarketplace is ERC721, Ownable, ERC721URIStorage  {
 
         return tokens;
     }
+    function buyNFTs(
+        uint256[] memory tokenIds,
+        uint256[] memory quantities,
+        address[][] memory _Royaltyrecipients,
+        uint256[][] memory _Royaltyamounts
+    ) public payable {
+        require(tokenIds.length == quantities.length, "Token IDs and quantities length mismatch");
 
+        uint256 totalCost;
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            uint256 tokenId = tokenIds[i];
+            uint256 quantity = quantities[i];
+
+            Offer memory offer = tokenIdToOffer[tokenId];
+            require(offer.isForSale, "Token not for sale");
+
+            uint256 cost = offer.askingPrice * quantity;
+            totalCost += cost;
+        }
+
+        require(msg.value >= totalCost, "Insufficient funds");
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            uint256 tokenId = tokenIds[i];
+            uint256 quantity = quantities[i];
+
+            Offer memory offer = tokenIdToOffer[tokenId];
+            uint256 cost = offer.askingPrice * quantity;
+
+            uint256 total_royalties;
+            uint royalties = _Royaltyrecipients[i].length;
+            for (uint r = 0; r < royalties; r++){
+                address royaltyRecipient = _Royaltyrecipients[i][r];
+                uint256 royaltyFee = _Royaltyamounts[i][r];
+                require(royaltyFee >= 0 && royaltyFee <= 100, "Royalty must be between 0 and 100");
+                if (royaltyFee > 0) {
+                    uint256 royaltyAmount = (cost * royaltyFee) / 100;
+                    total_royalties += royaltyAmount;
+                    pendingWithdrawals[royaltyRecipient] += royaltyAmount;
+                }
+            }
+
+            uint256 marketFeeAmount = (cost * marketFeePercentage) / 1000;
+            uint256 sellerAmount = cost - total_royalties - marketFeeAmount;
+
+            pendingWithdrawals[offer.seller] += sellerAmount;
+            pendingWithdrawals[owner()] += marketFeeAmount;
+
+            for (uint256 q = 0; q < quantity; q++) {
+                _transfer(offer.seller, _msgSender(), tokenId);
+            }
+
+            tokenIdToOffer[tokenId].isForSale = false;
+        }
+    }
     // Override the tokenURI function
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return ERC721URIStorage.tokenURI(tokenId);
